@@ -19,22 +19,16 @@ phases:
         MY_COLOR="$(cut -d'-' -f2 <<<'${env_name}')"
         MY_ENV="$(cut -d'-' -f1 <<<'${env_name}')"
         if [ "$MY_COLOR" == "green" ]; then
-          terraform workspace new $MY_ENV-blue
+          terraform workspace select $MY_ENV-blue || terraform workspace new $MY_ENV-blue
           terraform init
           terraform plan -detailed-exitcode -out=.tf-plan
           terraform apply -auto-approve .tf-plan
           aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-$MY_ENV-blue --region us-east-1
         else 
-          terraform workspace new $MY_ENV-green
+          terraform workspace select $MY_ENV-green || terraform workspace new $MY_ENV-green
           terraform init
           terraform plan -detailed-exitcode -out=.tf-plan
           terraform apply -auto-approve .tf-plan
           aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-$MY_ENV-green --region us-east-1
         fi
-        cd ../shared
-        terraform init
-        terraform workspace select shared-${env_type}
-        terraform plan -detailed-exitcode -out=.tf-plan
-        terraform apply -auto-approve .tf-plan
-
         
