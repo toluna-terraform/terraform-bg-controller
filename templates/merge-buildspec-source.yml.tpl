@@ -22,7 +22,7 @@ phases:
           NEXT_COLOR="green"
           CURRENT_COLOR="white"
           NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
-          CURRENT_RECORD=$(echo $is_White | jq '.ResourceRecords[0].Value')
+          CURRENT_RECORD="DUMMY_Blue"
         else 
           echo "switching colors"
           green_weight=$(echo $is_Green | jq '.Weight')
@@ -30,12 +30,12 @@ phases:
             NEXT_COLOR="blue"
             CURRENT_COLOR="green"
             NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-blue --query "LoadBalancers[0].DNSName" --output text )
-            CURRENT_RECORD=$(echo $is_Green | jq '.ResourceRecords[0].Value')
+            CURRENT_RECORD="DUMMY_Green"
           else
             NEXT_COLOR="green"
             CURRENT_COLOR="blue"
             NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}V-green --query "LoadBalancers[0].DNSName" --output text )
-            CURRENT_RECORD=$(echo $is_Blue | jq '.ResourceRecords[0].Value')
+            CURRENT_RECORD="DUMMY_Blue"
           fi
         fi
         aws route53 change-resource-record-sets --hosted-zone-id ${hosted_zone_id} --change-batch '{"Comment": "{'$CURRENT_COLOR': 0, '$NEXT_COLOR': 100 }",
