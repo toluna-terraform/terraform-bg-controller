@@ -45,7 +45,7 @@ phases:
             {
               "Action": "UPSERT",
               "ResourceRecordSet": {
-              "Name": "'"local.app_envs_raw[trimsuffix(trimsuffix(key,"-green"),"-blue")].is_blue_green"'.${domain}",
+              "Name": "'"$MY_ENV"'.${domain}",
                 "Type": "CNAME",
                 "TTL": 300,
                 "Weight": 100,
@@ -68,11 +68,12 @@ phases:
         }'
         cd terraform/app
         terraform init
-        if [ "$CURRENT_COLOR" == "white"]; then
+        if [[ "$CURRENT_COLOR" == "white" ]]; then
           terraform workspace select $MY_ENV
         else
           terraform workspace select $MY_ENV-$CURRENT_COLOR
         fi
+        terraform init
         terraform destroy -auto-approve
 
         
