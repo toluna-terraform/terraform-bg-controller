@@ -14,24 +14,59 @@ phases:
         export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
-        cd terraform/app
-        terraform init
-        MY_COLOR="$(cut -d'-' -f2 <<<'${env_name}')"
+        CURRENT_COLOR="$(cut -d'-' -f2 <<<'${env_name}')"
         MY_ENV="$(cut -d'-' -f1 <<<'${env_name}')"
-        if [[ "$${MY_COLOR}" == "green" ]]; then
-        NEXT_COLOR="blue"
-        else
-        NEXT_COLOR="green"
+        is_Green=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "green" )')
+        is_Blue=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "blue" )')
+        if [ -z "$is_Green" ] && [ -z "$is_Blue" ]; then
+          echo "Creating Green route"
+          is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')
+          NEXT_COLOR="green"
+          CURRENT_COLOR="blue"
+          NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-green --query "LoadBalancers[0].DNSName" --output text )
+          CURRENT_RECORD=$(echo $is_White | jq '.ResourceRecords[0].Value')
+        else 
+          echo "switching colors"
+          green_weight=$(echo $is_Green | jq '.Weight')
+          if [[ "$green_weight" == 100 ]];then
+            NEXT_COLOR="blue"
+            CURRENT_COLOR="green"
+            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-blue --query "LoadBalancers[0].DNSName" --output text )
+            CURRENT_RECORD=$(echo $is_Green | jq '.ResourceRecords[0].Value')
+          else
+            NEXT_COLOR="green"
+            CURRENT_COLOR="blue"
+            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-green --query "LoadBalancers[0].DNSName" --output text )
+            CURRENT_RECORD=$(echo $is_Blue | jq '.ResourceRecords[0].Value')
+          fi
         fi
-        currentState=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${domain}']" | jq '.[] |select(.SetIdentifier == "$MY_COLOR" ) | .Weight|="0"')
-        currentState=$(echo $currentState | jq '.[] |select(.SetIdentifier == "$NEXT_COLOR" ) | .Weight|="100"')
-        greenRecordSet="$(echo $currentState | jq '. |select(.SetIdentifier == \"green\" )')"
-        blueRecordSet="$(echo $currentState | jq '. |select(.SetIdentifier == \"blue\" )')"
-        aws route53 change-resource-record-sets --hosted-zone-id ${hosted_zone_id} --change-batch '{"Comment":"{$MY_COLOR 0, $NEXT_COLOR 100}","Changes":[{"Action":"UPSERT","ResourceRecordSet":$greenRecordSet},{"Action":"UPSERT","ResourceRecordSet":$blueRecordSet}]}'
-        terraform workspace select ${env_name}
-        terraform destroy -auto-approve
-        terraform workspace select default
-        terraform workspace delete -force ${env_name}
-
+        aws route53 change-resource-record-sets --hosted-zone-id ${hosted_zone_id} --change-batch '{"Comment": "{'$CURRENT_COLOR': 0, '$NEXT_COLOR': 100 }",
+          "Changes": [
+            {
+              "Action": "UPSERT",
+              "ResourceRecordSet": {
+              "Name": "'"$MY_ENV"'.${domain}",
+                "Type": "CNAME",
+                "TTL": 300,
+                "Weight": 100,
+                "SetIdentifier": "'"$NEXT_COLOR"'",
+                "ResourceRecords": [{ "Value": "'"$NEXT_RECORD"'" }]
+              }
+            },
+            {
+              "Action": "UPSERT",
+              "ResourceRecordSet": {
+                "Name": "'"$MY_ENV"'.${domain}",
+                "Type": "CNAME",
+                "TTL": 300,
+                "Weight": 0,
+                "SetIdentifier": "'"$CURRENT_COLOR"'",
+                "ResourceRecords": [{ "Value": '"$CURRENT_RECORD"' }]
+              }
+            }
+          ]
+        }'
+        
+      
         
         
