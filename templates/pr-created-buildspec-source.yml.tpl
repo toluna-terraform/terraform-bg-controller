@@ -16,19 +16,21 @@ phases:
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
         cd terraform/app
         terraform init
-        MY_COLOR="$(cut -d'-' -f2 <<<'${env_name}')"
-        MY_ENV="$(cut -d'-' -f1 <<<'${env_name}')"
-        if [ "$MY_COLOR" == "green" ]; then
-          terraform workspace select $MY_ENV-blue || terraform workspace new $MY_ENV-blue
+        is_Green=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "green" )')
+        is_Blue=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "blue" )')
+        is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')  
+        green_weight=$(echo $is_Green | jq '.Weight')
+        if [[ "$green_weight" == 100 ]];then
+          terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
           terraform init
           terraform plan -detailed-exitcode -out=.tf-plan
           terraform apply -auto-approve .tf-plan
-          aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-$MY_ENV-blue --region us-east-1
+          aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-${env_name}-blue --region us-east-1
         else 
-          terraform workspace select $MY_ENV-green || terraform workspace new $MY_ENV-green
+          terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
           terraform init
           terraform plan -detailed-exitcode -out=.tf-plan
           terraform apply -auto-approve .tf-plan
-          aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-$MY_ENV-green --region us-east-1
+          aws codepipeline start-pipeline-execution --name codepipeline-cd-${app_name}-${env_name}-green --region us-east-1
         fi
         

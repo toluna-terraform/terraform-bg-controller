@@ -14,16 +14,14 @@ phases:
         export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
-        CURRENT_COLOR="$(cut -d'-' -f2 <<<'${env_name}')"
-        MY_ENV="$(cut -d'-' -f1 <<<'${env_name}')"
-        is_Green=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "green" )')
-        is_Blue=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "blue" )')
+        is_Green=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "green" )')
+        is_Blue=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "blue" )')
         if [ -z "$is_Green" ] && [ -z "$is_Blue" ]; then
           echo "Creating Green route"
-          is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')
+          is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')
           NEXT_COLOR="green"
           CURRENT_COLOR="white"
-          NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-green --query "LoadBalancers[0].DNSName" --output text )
+          NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
           CURRENT_RECORD=$(echo $is_White | jq '.ResourceRecords[0].Value')
         else 
           echo "switching colors"
@@ -31,12 +29,12 @@ phases:
           if [[ "$green_weight" == 100 ]];then
             NEXT_COLOR="blue"
             CURRENT_COLOR="green"
-            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-blue --query "LoadBalancers[0].DNSName" --output text )
+            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-blue --query "LoadBalancers[0].DNSName" --output text )
             CURRENT_RECORD=$(echo $is_Green | jq '.ResourceRecords[0].Value')
           else
             NEXT_COLOR="green"
             CURRENT_COLOR="blue"
-            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-green --query "LoadBalancers[0].DNSName" --output text )
+            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}V-green --query "LoadBalancers[0].DNSName" --output text )
             CURRENT_RECORD=$(echo $is_Blue | jq '.ResourceRecords[0].Value')
           fi
         fi
@@ -45,7 +43,7 @@ phases:
             {
               "Action": "UPSERT",
               "ResourceRecordSet": {
-              "Name": "'"$MY_ENV"'.${domain}",
+              "Name": "${env_name}.${domain}",
                 "Type": "CNAME",
                 "TTL": 300,
                 "Weight": 100,
@@ -56,7 +54,7 @@ phases:
             {
               "Action": "UPSERT",
               "ResourceRecordSet": {
-                "Name": "'"$MY_ENV"'.${domain}",
+                "Name": "${env_name}.${domain}",
                 "Type": "CNAME",
                 "TTL": 300,
                 "Weight": 0,
@@ -69,17 +67,17 @@ phases:
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
-          terraform workspace select $MY_ENV
+          terraform workspace select ${env_name}
         else
-          terraform workspace select $MY_ENV-$CURRENT_COLOR
+          terraform workspace select ${env_name}-$CURRENT_COLOR
         fi
         terraform init
         terraform destroy -auto-approve
-        terraform workspace select $MY_ENV-$NEXT_COLOR
+        terraform workspace select ${env_name}-$NEXT_COLOR
         if [[ "$CURRENT_COLOR" == "white" ]]; then
-          terraform workspace delete $MY_ENV
+          terraform workspace delete ${env_name}
         else
-          terraform workspace delete $MY_ENV-$CURRENT_COLOR
+          terraform workspace delete ${env_name}-$CURRENT_COLOR
         fi
         cd ../shared
         terraform init
