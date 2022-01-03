@@ -75,7 +75,18 @@ phases:
         fi
         terraform init
         terraform destroy -auto-approve
-
+        terraform workspace select $MY_ENV-$NEXT_COLOR
+        if [[ "$CURRENT_COLOR" == "white" ]]; then
+          terraform workspace delete $MY_ENV
+        else
+          terraform workspace delete $MY_ENV-$CURRENT_COLOR
+        fi
+        cd ../shared
+        terraform init
+        terraform workspace select shared-${env_type}
+        terraform init
+        terraform plan -detailed-exitcode -out=.tf-plan
+        terraform apply -auto-approve .tf-plan
         
       
         
