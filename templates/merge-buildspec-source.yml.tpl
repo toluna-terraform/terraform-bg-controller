@@ -22,7 +22,7 @@ phases:
           echo "Creating Green route"
           is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='$MY_ENV.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')
           NEXT_COLOR="green"
-          CURRENT_COLOR="blue"
+          CURRENT_COLOR="white"
           NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-$MY_ENV-green --query "LoadBalancers[0].DNSName" --output text )
           CURRENT_RECORD=$(echo $is_White | jq '.ResourceRecords[0].Value')
         else 
@@ -45,7 +45,7 @@ phases:
             {
               "Action": "UPSERT",
               "ResourceRecordSet": {
-              "Name": "'"$MY_ENV"'.${domain}",
+              "Name": "'"local.app_envs_raw[trimsuffix(trimsuffix(key,"-green"),"-blue")].is_blue_green"'.${domain}",
                 "Type": "CNAME",
                 "TTL": 300,
                 "Weight": 100,
@@ -66,6 +66,15 @@ phases:
             }
           ]
         }'
+        cd terraform/app
+        terraform init
+        if [ "$CURRENT_COLOR" == "white"]; then
+          terraform workspace select $MY_ENV
+        else
+          terraform workspace select $MY_ENV-$CURRENT_COLOR
+        fi
+        terraform destroy -auto-approve
+
         
       
         
