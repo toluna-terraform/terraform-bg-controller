@@ -22,39 +22,18 @@ phases:
           echo "Creating Green route"
           NEXT_COLOR="green"
           CURRENT_COLOR="white"
-          NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
           CURRENT_RECORD="DUMMY_Blue"
         else 
           echo "switching colors"
           if [[ $CURRENT_COLOR == "green" ]]; then
             NEXT_COLOR="blue"
             CURRENT_COLOR="green"
-            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-blue --query "LoadBalancers[0].DNSName" --output text )
-            CURRENT_RECORD="DUMMY_Green"
-          else
+         else
             NEXT_COLOR="green"
             CURRENT_COLOR="blue"
-            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
-            CURRENT_RECORD="DUMMY_Blue"
-          fi
+         fi
         fi
-        aws route53 change-resource-record-sets --hosted-zone-id ${hosted_zone_id} --change-batch '{"Comment": "{'$CURRENT_COLOR': 0, '$NEXT_COLOR': 100 }",
-          "Changes": [
-            {
-              "Action": "UPSERT",
-              "ResourceRecordSet": {
-              "Name": "${env_name}.${domain}",
-                "Type": "CNAME",
-                "TTL": 300,
-                "Weight": 100,
-                "SetIdentifier": "'"$NEXT_COLOR"'",
-                "ResourceRecords": [{ "Value": "'"$NEXT_RECORD"'" }]
-              }
-            }
-          ]
-        }'
         consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
-
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
@@ -62,6 +41,14 @@ phases:
         else
           terraform workspace select ${env_name}-$CURRENT_COLOR
         fi
+        echo "Shifting traffic"
+        cd ../shared
+        terraform init
+        terraform workspace select shared-${env_type}
+        terraform init
+        terraform apply -auto-approve .tf-plan
+        echo "Destroying old environment"
+        cd ../app
         terraform init
         terraform destroy -auto-approve
         terraform workspace select ${env_name}-$NEXT_COLOR
@@ -70,11 +57,11 @@ phases:
         else
           terraform workspace delete ${env_name}-$CURRENT_COLOR
         fi
+        echo "Cleaning up"
         cd ../shared
         terraform init
         terraform workspace select shared-${env_type}
         terraform init
-        terraform plan -detailed-exitcode -out=.tf-plan
         terraform apply -auto-approve .tf-plan
         
       
