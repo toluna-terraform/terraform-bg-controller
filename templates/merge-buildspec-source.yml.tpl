@@ -50,21 +50,11 @@ phases:
                 "SetIdentifier": "'"$NEXT_COLOR"'",
                 "ResourceRecords": [{ "Value": "'"$NEXT_RECORD"'" }]
               }
-            },
-            {
-              "Action": "UPSERT",
-              "ResourceRecordSet": {
-                "Name": "${env_name}.${domain}",
-                "Type": "CNAME",
-                "TTL": 300,
-                "Weight": 0,
-                "SetIdentifier": "'"$CURRENT_COLOR"'",
-                "ResourceRecords": [{ "Value": "'"$CURRENT_RECORD"'" }]
-              }
             }
           ]
         }'
         consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
+
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
