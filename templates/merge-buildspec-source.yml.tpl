@@ -17,7 +17,7 @@ phases:
         export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
-        CURRENT_COLOR=$(consul kv get "/infra/${app_name}-${env_name}/current_color")
+        CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
         if [ "$CURRENT_COLOR" != "green" ] && [ "$CURRENT_COLOR" != "blue" ]; then
           echo "Creating Green route"
           NEXT_COLOR="green"
@@ -64,7 +64,7 @@ phases:
             }
           ]
         }'
-        consul kv put "/infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
+        consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
