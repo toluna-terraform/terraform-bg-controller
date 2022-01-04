@@ -18,7 +18,7 @@ phases:
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
         cd terraform/app
         terraform init
-        CURRENT_COLOR=$(consul kv get "/infra/${app_name}-${env_name}/current_color"
+        CURRENT_COLOR=$(consul kv get "/infra/${app_name}-${env_name}/current_color")
         if [[ $CURRENT_COLOR == "green" ]]; then
           terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
           terraform init
