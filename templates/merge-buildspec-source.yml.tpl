@@ -18,7 +18,7 @@ phases:
         export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
         CURRENT_COLOR=$(consul kv get "/infra/${app_name}-${env_name}/current_color")
-        if [[ $CURRENT_COLOR == *"Error!"* ]]; then
+        if [ "$CURRENT_COLOR" != "green" ] && [ "$CURRENT_COLOR" != "blue" ]; then
           echo "Creating Green route"
           NEXT_COLOR="green"
           CURRENT_COLOR="white"
@@ -34,7 +34,7 @@ phases:
           else
             NEXT_COLOR="green"
             CURRENT_COLOR="blue"
-            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}V-green --query "LoadBalancers[0].DNSName" --output text )
+            NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
             CURRENT_RECORD="DUMMY_Blue"
           fi
         fi
@@ -59,7 +59,7 @@ phases:
                 "TTL": 300,
                 "Weight": 0,
                 "SetIdentifier": "'"$CURRENT_COLOR"'",
-                "ResourceRecords": [{ "Value": '"$CURRENT_RECORD"' }]
+                "ResourceRecords": [{ "Value": "'"$CURRENT_RECORD"'" }]
               }
             }
           ]
