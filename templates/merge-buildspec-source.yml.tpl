@@ -66,7 +66,7 @@ phases:
             }
           ]
         }'
-        consul kv put "/infra/${app-name}-${env_name}/current_color" $NEXT_COLOR
+        consul kv put "/infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
