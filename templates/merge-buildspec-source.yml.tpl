@@ -7,26 +7,28 @@ phases:
       - yum install -y yum-utils
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
       - yum -y install terraform
+      - yum install -y yum-utils
+      - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/RHEL/hashicorp.repo
+      - yum -y install consul
   build:
     commands:
       - |
+        export CONSUL_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_project_id" --with-decryption --query 'Parameter.Value' --output text)
         export CONSUL_HTTP_TOKEN=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_http_token" --with-decryption --query 'Parameter.Value' --output text)
+        export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
         export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
         export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
-        is_Green=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "green" )')
-        is_Blue=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "blue" )')
-        if [ -z "$is_Green" ] && [ -z "$is_Blue" ]; then
+        CURRENT_COLOR=$(consul kv get "/infra/${app_name}-${env_name}/current_color"
+        if [[ $CURRENT_COLOR == *"Error!"* ]]; then
           echo "Creating Green route"
-          is_White=$(aws route53 list-resource-record-sets --hosted-zone-id ${hosted_zone_id} --query "ResourceRecordSets[?Name=='${env_name}.${domain}']" | jq '.[] |select(.SetIdentifier == "white" )')
           NEXT_COLOR="green"
           CURRENT_COLOR="white"
           NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-green --query "LoadBalancers[0].DNSName" --output text )
           CURRENT_RECORD="DUMMY_Blue"
         else 
           echo "switching colors"
-          green_weight=$(echo $is_Green | jq '.Weight')
-          if [[ "$green_weight" == 100 ]];then
+          if [[ $CURRENT_COLOR == "green" ]]; then
             NEXT_COLOR="blue"
             CURRENT_COLOR="green"
             NEXT_RECORD=$(aws elbv2 describe-load-balancers --names ${app_name}-${env_name}-blue --query "LoadBalancers[0].DNSName" --output text )
@@ -64,6 +66,7 @@ phases:
             }
           ]
         }'
+        consul kv put "/infra/${app-name}-${env_name}/current_color" $NEXT_COLOR
         cd terraform/app
         terraform init
         if [[ "$CURRENT_COLOR" == "white" ]]; then
