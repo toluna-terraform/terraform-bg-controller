@@ -20,7 +20,7 @@ resource "aws_codebuild_webhook" "pr_bg_webhook" {
 
     filter {
       type    = "FILE_PATH"
-      pattern = "^terraform.*"
+      pattern = "${var.path_pattern}"
     }
   }
   count = var.pipeline_type == "cd" ? 1 : 0
@@ -41,7 +41,7 @@ resource "aws_codebuild_webhook" "merge_bg_webhook" {
 
     filter {
       type    = "FILE_PATH"
-      pattern = "^terraform.*"
+      pattern = "${var.path_pattern}"
     }
   }
   count = var.pipeline_type == "cd" ? 1 : 0

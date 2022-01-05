@@ -18,6 +18,7 @@ module "source_blue_green" {
   env_name = "${each.key}"
   app_name = local.app_name
   env_type = local.env_vars.env_type
+  path_pattern = "^terraform.*"
   domain = "${local.env_vars.domain}."
   trigger_branch = "${each.value.trigger_branch}"
   pipeline_type = "${each.value.pipeline_type}"
@@ -64,6 +65,7 @@ resource |
 |env_name|Environment name|
 |app_name|Application name|
 |env_type|Environmanet type (I.E. prod or non-prod)|
+|path_pattern|A pattern for listening to code changes|
 |domain|domain for route53 weight shift|
 |trigger_branch|the branch which PR on it will trigger the codebuild|
 |pipeline_type|ci or cd|

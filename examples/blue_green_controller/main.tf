@@ -4,6 +4,7 @@ module "source_blue_green" {
   env_name = "${each.key}"
   app_name = "my_app"
   env_type = "non-prod"
+  path_pattern = "^terraform.*"
   domain = "example.com."
   trigger_branch = "test_branch"
   pipeline_type = "cd"

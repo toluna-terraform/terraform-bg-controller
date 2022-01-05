@@ -46,7 +46,8 @@ phases:
         terraform init
         terraform workspace select shared-${env_type}
         terraform init
-        terraform apply -auto-approve .tf-plan
+        terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
+        terraform apply -target=module.dns -auto-approve .tf-plan
         echo "Destroying old environment"
         cd ../app
         terraform init
@@ -57,13 +58,3 @@ phases:
         else
           terraform workspace delete ${env_name}-$CURRENT_COLOR
         fi
-        echo "Cleaning up"
-        cd ../shared
-        terraform init
-        terraform workspace select shared-${env_type}
-        terraform init
-        terraform apply -auto-approve .tf-plan
-        
-      
-        
-        
