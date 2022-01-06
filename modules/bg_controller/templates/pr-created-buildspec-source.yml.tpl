@@ -11,6 +11,8 @@ phases:
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | awk -F/ '{print $NF}')
       - git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
       - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
+      - USER=$(echo $(aws ssm get-parameter --name /app/bb_user --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
+      - PASS=$(echo $(aws ssm get-parameter --name /app/bb_pass --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
   build:
     commands:
       - |
@@ -20,7 +22,7 @@ phases:
           TF_CHANGED="false"
         fi
         echo "did tf have changes $TF_CHANGED"
-        if [[ "${pipeline_type}" == "ci" || "${is_blue_green}" == "true" ]] && [[ "$TF_CHANGED" == "true" ]]; then
+        if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
           export CONSUL_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_project_id" --with-decryption --query 'Parameter.Value' --output text)
           export CONSUL_HTTP_TOKEN=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_http_token" --with-decryption --query 'Parameter.Value' --output text)
           export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
@@ -54,6 +56,13 @@ phases:
           echo "false" > service_changed.txt
         fi
       - echo $PR_NUMBER > pr.txt
+      - | 
+        if [[ $CODEBUILD_BUILD_SUCCEEDING == 1 ]]; then
+          COMMENT="PR Pipeline has finished successfully."
+        else 
+          COMMENT="PR Pipeline has failed."
+        URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+        curl --request POST --url $URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"$COMMENT\"}}"
 artifacts:
   files:
     - '**/*'

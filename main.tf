@@ -16,7 +16,7 @@ module "source_blue_green" {
   env_type = "${each.value.env_type}"
   path_pattern = "${var.path_pattern}"
   domain = "${var.domain}"
-  is_blue_green = "${each.value.is_blue_green}"
+  is_managed_env = "${each.value.is_managed_env}"
   trigger_branch = "${each.value.pipeline_branch}"
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"

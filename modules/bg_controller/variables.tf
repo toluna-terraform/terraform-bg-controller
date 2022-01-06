@@ -30,6 +30,6 @@ variable "source_repository" {
     type = string
 }
 
-variable "is_blue_green" {
+variable "is_managed_env" {
     type = string
 }
