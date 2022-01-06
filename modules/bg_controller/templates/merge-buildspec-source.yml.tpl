@@ -62,11 +62,4 @@ phases:
           else
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
-        else
-          cd ../shared
-          terraform init
-          terraform workspace select shared-${env_type}
-          terraform init
-          terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
-          terraform apply -target=module.dns -auto-approve .tf-plan
         fi
