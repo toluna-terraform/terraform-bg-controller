@@ -1,12 +1,9 @@
 module "source_blue_green" {
-  for_each = local.bg_envs
   source = "../../"
-  env_name = "${each.key}"
-  app_name = "my_app"
-  env_type = "non-prod"
-  path_pattern = "^terraform.*"
-  domain = "example.com."
-  trigger_branch = "test_branch"
-  pipeline_type = "cd"
-  source_repository = "test_repo/my_app"
+  app_name = local.app_name
+  apps = local.bg_envs
+  domain = local.env_vars.domain
+  env_type = local.env_vars.env_type
+  path_pattern = "^terraform/app.*"
+  source_repository = "my_repo/${local.app_name}"
 }

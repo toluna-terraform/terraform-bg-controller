@@ -13,16 +13,12 @@ The module requires some pre conditions
 ## Usage
 ```hcl
 module "source_blue_green" {
-  for_each = local.bg_envs
-  source = "toluna-terraform/controller/bg"
-  env_name = "${each.key}"
   app_name = local.app_name
+  apps = local.bg_envs
+  domain = local.env_vars.domain
   env_type = local.env_vars.env_type
-  path_pattern = "^terraform.*"
-  domain = "${local.env_vars.domain}."
-  trigger_branch = "${each.value.trigger_branch}"
-  pipeline_type = "${each.value.pipeline_type}"
-  source_repository = "${repo_name}"
+  path_pattern = "^terraform/app.*"
+  source_repository = "my_repo/${local.app_name}"
 }
 ```
 
@@ -62,15 +58,12 @@ resource |
 ## Inputs
 | Name | Description |
 |------|------|
-|env_name|Environment name|
+|apps|The list of apps for the ci/cd trigger|
 |app_name|Application name|
 |env_type|Environmanet type (I.E. prod or non-prod)|
 |path_pattern|A pattern for listening to code changes|
 |domain|domain for route53 weight shift|
-|trigger_branch|the branch which PR on it will trigger the codebuild|
-|pipeline_type|ci or cd|
 |source_repository|the repository to listen for triggers|
 
 ## Outputs
 No outputs.
-

@@ -1,24 +1,7 @@
-variable "pipeline_type" {
-  type = string
-}
-
-variable "trigger_branch" {
-  type = string
-}
-
-variable "env_name" {
-  type = string
+variable "apps" {
 }
 
 variable "app_name" {
-  type = string
-}
-
-variable "domain" {
-  type = string
-}
-
-variable "env_type" {
   type = string
 }
 
@@ -30,3 +13,10 @@ variable "source_repository" {
     type = string
 }
 
+variable "env_type" {
+    type = string
+}
+
+variable "domain" {
+    type = string
+}
