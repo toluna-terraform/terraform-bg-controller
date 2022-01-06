@@ -1,6 +1,7 @@
 resource "aws_s3_bucket" "codepipeline_bucket" {
   bucket        = "s3-codepipeline-${var.app_name}-${var.env_type}"
-  acl           = "private"
+  block_public_acls   = true
+  block_public_policy = true
   force_destroy = true
   tags = tomap({
     UseWithCodeDeploy = true
