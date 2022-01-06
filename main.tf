@@ -1,12 +1,16 @@
 resource "aws_s3_bucket" "codepipeline_bucket" {
   bucket        = "s3-codepipeline-${var.app_name}-${var.env_type}"
-  block_public_acls   = true
-  block_public_policy = true
   force_destroy = true
   tags = tomap({
     UseWithCodeDeploy = true
     created_by        = "terraform"
   })
+}
+
+resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  block_public_acls   = true
+  block_public_policy = true
 }
 
 module "source_blue_green" {
