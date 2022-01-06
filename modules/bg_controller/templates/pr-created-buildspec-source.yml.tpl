@@ -13,22 +13,24 @@ phases:
       - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
       - USER=$(echo $(aws ssm get-parameter --name /app/bb_user --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
       - PASS=$(echo $(aws ssm get-parameter --name /app/bb_pass --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
+      - export CONSUL_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_project_id" --with-decryption --query 'Parameter.Value' --output text)
+      - export CONSUL_HTTP_TOKEN=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_http_token" --with-decryption --query 'Parameter.Value' --output text)
+      - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
+      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
+      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
+      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
+          
   build:
     commands:
       - |
-        if grep -q terraform/app "/tmp/diff_results.txt" ; then
-          TF_CHANGED="true"
-        else 
+        tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
+        if [[ -z $tf_changed ]]; then
           TF_CHANGED="false"
+        else 
+          TF_CHANGED="true"
         fi
         echo "did tf have changes $TF_CHANGED"
         if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
-          export CONSUL_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_project_id" --with-decryption --query 'Parameter.Value' --output text)
-          export CONSUL_HTTP_TOKEN=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_http_token" --with-decryption --query 'Parameter.Value' --output text)
-          export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
-          export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
-          export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
-          export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
           cd terraform/app
           terraform init
           CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
@@ -43,26 +45,18 @@ phases:
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
           fi
-          consul kv put "infra/${app_name}-${env_name}/infra_changed true
-        else
-          consul kv put "infra/${app_name}-${env_name}/infra_changed false
         fi
+      - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
   post_build:
     commands:
       - |
-        if grep -q service/ "/tmp/diff_results.txt" ; then
-          echo "true" > service_changed.txt
-        else 
+        service_changed=$(grep service/ "/tmp/diff_results.txt")
+        if [[ -z $service_changed ]]; then
           echo "false" > service_changed.txt
+        else 
+          echo "true" > service_changed.txt
         fi
       - echo $PR_NUMBER > pr.txt
-      - | 
-        if [[ $CODEBUILD_BUILD_SUCCEEDING == 1 ]]; then
-          COMMENT="PR Pipeline has finished successfully."
-        else 
-          COMMENT="PR Pipeline has failed."
-        URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-        curl --request POST --url $URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"$COMMENT\"}}"
 artifacts:
   files:
     - '**/*'
