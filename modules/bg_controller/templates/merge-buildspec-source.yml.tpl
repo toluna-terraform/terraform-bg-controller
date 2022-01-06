@@ -37,13 +37,6 @@ phases:
             fi
           fi
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
-          cd terraform/app
-          terraform init
-          if [[ "$CURRENT_COLOR" == "white" ]]; then
-            terraform workspace select ${env_name}
-          else
-            terraform workspace select ${env_name}-$CURRENT_COLOR
-          fi
           echo "Shifting traffic"
           cd ../shared
           terraform init
@@ -52,6 +45,13 @@ phases:
           terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
           terraform apply -target=module.dns -auto-approve .tf-plan
           consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
+          cd terraform/app
+          terraform init
+          if [[ "$CURRENT_COLOR" == "white" ]]; then
+            terraform workspace select ${env_name}
+          else
+            terraform workspace select ${env_name}-$CURRENT_COLOR
+          fi
           echo "Destroying old environment"
           cd ../app
           terraform init
