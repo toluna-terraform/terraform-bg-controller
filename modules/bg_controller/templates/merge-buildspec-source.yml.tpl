@@ -36,7 +36,6 @@ phases:
               CURRENT_COLOR="blue"
             fi
           fi
-          consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
           cd terraform/app
           terraform init
@@ -52,6 +51,7 @@ phases:
           terraform init
           terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
           terraform apply -target=module.dns -auto-approve .tf-plan
+          consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
           echo "Destroying old environment"
           cd ../app
           terraform init
