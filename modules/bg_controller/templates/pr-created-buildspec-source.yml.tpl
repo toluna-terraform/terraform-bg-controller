@@ -41,6 +41,9 @@ phases:
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
           fi
+          consul kv put "infra/${app_name}-${env_name}/infra_changed true
+        else
+          consul kv put "infra/${app_name}-${env_name}/infra_changed false
         fi
   post_build:
     commands:
