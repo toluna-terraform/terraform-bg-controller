@@ -29,6 +29,7 @@ phases:
         else 
           TF_CHANGED="true"
         fi
+        NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
         echo "did tf have changes $TF_CHANGED"
         if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
           cd terraform/app
@@ -39,11 +40,13 @@ phases:
             terraform init
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
+            $NEXT_COLOR="blue"
           else 
             terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
             terraform init
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
+            $NEXT_COLOR="green"
           fi
         fi
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
@@ -63,6 +66,7 @@ phases:
         else
           echo "false" > build.txt
         fi
+      - echo $NEXT_COLOR > color.txt
 artifacts:
   files:
     - '**/*'
