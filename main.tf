@@ -28,3 +28,8 @@ module "source_blue_green" {
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
 }
+
+module "bitbucket_controller" {
+  source = "./modules/bitbucket_listner"
+  lambda_name = "${var.app_name}-bitbucket_listner"
+}
