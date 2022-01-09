@@ -50,13 +50,19 @@ phases:
   post_build:
     commands:
       - |
-        service_changed=$(grep service/ "/tmp/diff_results.txt")
-        if [[ -z $service_changed ]]; then
-          echo "false" > service_changed.txt
+        src_changed=$(grep service/ "/tmp/diff_results.txt")
+        if [[ -z $src_changed ]]; then
+          echo "false" > src_changed.txt
         else 
-          echo "true" > service_changed.txt
+          echo "true" > src_changed.txt
         fi
       - echo $PR_NUMBER > pr.txt
+      - | 
+        if [[ "${pipeline_type}" == "ci" ]]; then
+          echo "true" > build.txt
+        else
+          echo "false" > build.txt
+        fi
 artifacts:
   files:
     - '**/*'
