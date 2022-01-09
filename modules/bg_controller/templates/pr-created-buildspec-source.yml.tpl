@@ -40,13 +40,13 @@ phases:
             terraform init
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
-            $NEXT_COLOR="blue"
+            NEXT_COLOR="blue"
           else 
             terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
             terraform init
             terraform plan -detailed-exitcode -out=.tf-plan
             terraform apply -auto-approve .tf-plan
-            $NEXT_COLOR="green"
+            NEXT_COLOR="green"
           fi
         fi
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
