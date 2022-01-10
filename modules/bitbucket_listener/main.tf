@@ -66,14 +66,13 @@ resource "aws_api_gateway_method_response" "bitbucket_listener" {
   resource_id = aws_api_gateway_resource.bitbucket_listener.id
   http_method = aws_api_gateway_method.bitbucket_listener.http_method
   status_code = "200"
+}
 
-  /* response_templates = {
-    "application/json" = "{\"message\":$context.error.messageString}"
-  }
-
-  response_parameters = {
-    "gatewayresponse.header.Authorization" = "'Basic'"
-  } */
+resource "aws_api_gateway_integration_response" "MyDemoIntegrationResponse" {
+  rest_api_id = aws_api_gateway_rest_api.bitbucket_listener.id
+  resource_id = aws_api_gateway_resource.bitbucket_listener.id
+  http_method = aws_api_gateway_method.bitbucket_listener.http_method
+  status_code = aws_api_gateway_method_response.bitbucket_listener.status_code
 }
 
 resource "aws_api_gateway_stage" "bitbucket_listener" {
