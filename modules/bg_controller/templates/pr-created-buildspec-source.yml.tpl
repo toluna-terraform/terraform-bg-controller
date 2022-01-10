@@ -23,30 +23,32 @@ phases:
   build:
     commands:
       - |
-        tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
-        if [[ -z $tf_changed ]]; then
-          TF_CHANGED="false"
-        else 
-          TF_CHANGED="true"
-        fi
-        NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
-        echo "did tf have changes $TF_CHANGED"
-        if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
-          cd terraform/app
-          terraform init
-          CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
-          if [[ $CURRENT_COLOR == "green" ]]; then
-            terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
-            terraform init
-            terraform plan -detailed-exitcode -out=.tf-plan
-            terraform apply -auto-approve .tf-plan
-            $NEXT_COLOR="blue"
+        if [[ "${is_managed_env}" == "true" ]]; then
+          tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
+          if [[ -z $tf_changed ]]; then
+            TF_CHANGED="false"
           else 
-            terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
+            TF_CHANGED="true"
+          fi
+          NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+          echo "did tf have changes $TF_CHANGED"
+          if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
+            cd terraform/app
             terraform init
-            terraform plan -detailed-exitcode -out=.tf-plan
-            terraform apply -auto-approve .tf-plan
-            $NEXT_COLOR="green"
+            CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+            if [[ $CURRENT_COLOR == "green" ]]; then
+              terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
+              terraform init
+              terraform plan -detailed-exitcode -out=.tf-plan
+              terraform apply -auto-approve .tf-plan
+              NEXT_COLOR="blue"
+            else 
+              terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
+              terraform init
+              terraform plan -detailed-exitcode -out=.tf-plan
+              terraform apply -auto-approve .tf-plan
+              NEXT_COLOR="green"
+            fi
           fi
         fi
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
