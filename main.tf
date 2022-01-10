@@ -29,7 +29,9 @@ module "source_blue_green" {
   source_repository = "${var.source_repository}"
 }
 
-module "bitbucket_controller" {
-  source = "./modules/bitbucket_listner"
-  lambda_name = "${var.app_name}-bitbucket_listner"
+module "bitbucket_listner" {
+  source = "./modules/bitbucket_listener"
+  env_type = "${var.env_type}"
+  app_name = "${var.app_name}"
+  domain = "${var.domain}"
 }

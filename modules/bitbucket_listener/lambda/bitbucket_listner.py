@@ -7,6 +7,7 @@ logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
 def lambda_handler(event, context):
+    body = json.loads(event['body'])
     ssm = boto3.client('ssm')
     USERNAME = ssm.get_parameter(
         Name='/app/bb_user',
@@ -16,8 +17,12 @@ def lambda_handler(event, context):
         Name='/app/bb_pass',
         WithDecryption=True
     )
-    url = "https://api.bitbucket.org/2.0/repositories/{}/{}/pullrequests/{}".format(event['org_id'],event['repo'],event['pr_id'])
+    
+    url = "https://api.bitbucket.org/2.0/repositories/{}/{}/pullrequests/{}".format(body['org_id'],body['repo'],body['pr_id'])
     response = requests.get(url, auth=("{}".format(USERNAME['Parameter']['Value']), "{}".format(PASSWORD['Parameter']['Value'])))
+    logger.info("Response Code is::::" + str(response.status_code))
     response_body = response.json()
     pr_state = response_body['state']
-    logger.info("PR State is: " + str(pr_state))
+    logger.info("PR State is::::" + str(pr_state))
+    result = {"statusCode": str(response.status_code)}
+    return result
