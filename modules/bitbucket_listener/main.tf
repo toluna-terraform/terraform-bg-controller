@@ -1,7 +1,7 @@
 resource "aws_api_gateway_rest_api" "bitbucket_listener" {
   name = "bitbucket_listener"
     endpoint_configuration {
-    types = ["PRIVATE"]
+    types = ["REGIONAL"]
   }
 }
 
@@ -18,7 +18,28 @@ resource "aws_api_gateway_rest_api_policy" "bitbucket_listener" {
         "AWS": "*"
       },
       "Action": "execute-api:Invoke",
-      "Resource": "${aws_api_gateway_rest_api.bitbucket_listener.execution_arn}"
+      "Resource": "${aws_api_gateway_rest_api.bitbucket_listener.execution_arn}/*",
+      "Condition": {
+        "IpAddress": {
+          "aws:SourceIp":[
+            "13.52.5.96/28",
+            "13.236.8.224/28",
+            "18.136.214.96/28",
+            "18.184.99.224/28",
+            "18.234.32.224/28",
+            "18.246.31.224/28",
+            "52.215.192.224/28",
+            "104.192.137.240/28",
+            "104.192.138.240/28",
+            "104.192.140.240/28",
+            "104.192.142.240/28",
+            "104.192.143.240/28",
+            "185.166.143.240/28",
+            "185.166.142.240/28",
+            "81.218.42.131"
+          ]
+        }
+      }
     }
   ]
 }
@@ -68,7 +89,7 @@ resource "aws_api_gateway_method_response" "bitbucket_listener" {
   status_code = "200"
 }
 
-resource "aws_api_gateway_integration_response" "MyDemoIntegrationResponse" {
+resource "aws_api_gateway_integration_response" "bitbucket_listener" {
   rest_api_id = aws_api_gateway_rest_api.bitbucket_listener.id
   resource_id = aws_api_gateway_resource.bitbucket_listener.id
   http_method = aws_api_gateway_method.bitbucket_listener.http_method
@@ -84,6 +105,16 @@ resource "aws_api_gateway_stage" "bitbucket_listener" {
   ]
 }
 
+resource "aws_api_gateway_method_settings" "bitbucket_listener" {
+  rest_api_id = aws_api_gateway_rest_api.bitbucket_listener.id
+  stage_name  = aws_api_gateway_stage.bitbucket_listener.stage_name
+  method_path = "*/*"
+
+  settings {
+    metrics_enabled = false
+    logging_level   = "ERROR"
+  }
+}
 
 resource "aws_api_gateway_deployment" "bitbucket_listener" {
   rest_api_id = aws_api_gateway_rest_api.bitbucket_listener.id
@@ -95,6 +126,40 @@ resource "aws_api_gateway_deployment" "bitbucket_listener" {
   lifecycle {
     create_before_destroy = true
   }
+  depends_on = [
+    aws_api_gateway_method.bitbucket_listener,aws_api_gateway_integration_response.bitbucket_listener
+  ]
+}
+
+
+terraform {
+  required_providers {
+    bitbucket = {
+      source = "aeirola/bitbucket"
+      version = "2.0.0"
+    }
+  }
+}
+
+provider "bitbucket" {
+  username = "${data.aws_ssm_parameter.bb_user.value}"
+  password = "${data.aws_ssm_parameter.bb_pass.value}"
+}
+
+resource "bitbucket_hook" "deploy_on_push" {
+  owner       = "tolunaengineering"
+  repository  = "${var.app_name}"
+  url         = "${aws_api_gateway_stage.bitbucket_listener.invoke_url}/${aws_api_gateway_resource.bitbucket_listener.path_part}"
+  description = "Toluna AWS controller"
+
+  events = [
+    "pullrequest:approved", 
+    "pullrequest:created", 
+    "pullrequest:fulfilled",
+    "pullrequest:rejected", 
+    "pullrequest:unapproved", 
+    "pullrequest:updated"
+  ]
 }
 
 resource "aws_lambda_permission" "bitbucket_listener" {
@@ -150,7 +215,8 @@ resource "aws_iam_role" "bitbucket_listener" {
         "Service": [
           "lambda.amazonaws.com",
           "sqs.amazonaws.com",
-          "apigateway.amazonaws.com"]
+          "apigateway.amazonaws.com"
+          ]
       },
       "Effect": "Allow",
       "Sid": ""
@@ -175,10 +241,11 @@ resource "aws_iam_role_policy_attachment" "role-apigatway-sqs" {
     policy_arn = "arn:aws:iam::aws:policy/AmazonSQSFullAccess"
 }
 
-/* resource "aws_route53_record" "records" {
-  zone_id  = data.aws_route53_zone.public.zone_id
-  name     = "bitbucket-listener-shared-${var.env_type}.${data.aws_route53_zone.public.name}"
-  type     = "CNAME"
-  ttl      = 300
-  records  = aws_api_gateway_stage.bitbucket_listener.invoke_url
-} */
+resource "aws_iam_role_policy_attachment" "role-cloudwatch" {
+    role       = "${aws_iam_role.bitbucket_listener.name}"
+    policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
+}
+
+resource "aws_api_gateway_account" "bitbucket_listener" {
+  cloudwatch_role_arn = aws_iam_role.bitbucket_listener.arn
+}

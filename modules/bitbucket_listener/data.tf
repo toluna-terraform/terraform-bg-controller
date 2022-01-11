@@ -9,3 +9,14 @@ data "aws_acm_certificate" "public" {
 }
 
 data "aws_caller_identity" "bitbucket_listener" {}
+
+
+data "aws_ssm_parameter" "bb_user" {
+  name = "/app/bb_user"
+  with_decryption = true
+}
+
+data "aws_ssm_parameter" "bb_pass" {
+  name = "/app/bb_pass"
+  with_decryption = true
+}

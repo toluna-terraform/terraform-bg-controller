@@ -34,4 +34,4 @@ module "bitbucket_listner" {
   env_type = "${var.env_type}"
   app_name = "${var.app_name}"
   domain = "${var.domain}"
-}
+} 
