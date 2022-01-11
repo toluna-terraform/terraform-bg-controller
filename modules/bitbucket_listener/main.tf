@@ -162,14 +162,6 @@ resource "bitbucket_hook" "deploy_on_push" {
   ]
 }
 
-resource "aws_lambda_permission" "bitbucket_listener" {
-  statement_id  = "AllowExecutionFromAPIGateway"
-  action        = "lambda:InvokeFunction"
-  function_name = aws_lambda_function.bitbucket_listener.function_name
-  principal     = "apigateway.amazonaws.com"
-  source_arn = "arn:aws:execute-api:us-east-1:047763475875:${aws_api_gateway_rest_api.bitbucket_listener.id}/*/${aws_api_gateway_method.bitbucket_listener.http_method}${aws_api_gateway_resource.bitbucket_listener.path}"
-}
-
 resource "aws_lambda_layer_version" "lambda_layer" {
   filename   = "${path.module}/layer/layer.zip"
   layer_name = "bitbucket_listener"
@@ -189,6 +181,7 @@ resource "aws_lambda_function" "bitbucket_listener" {
   role          = aws_iam_role.bitbucket_listener.arn
   handler       = "bitbucket_listener.lambda_handler"
   runtime       = "python3.8"
+  timeout       = 180
   layers = [aws_lambda_layer_version.lambda_layer.arn]
   source_code_hash = "${data.archive_file.lambda_zip.output_base64sha256}"
 }
@@ -248,4 +241,9 @@ resource "aws_iam_role_policy_attachment" "role-cloudwatch" {
 
 resource "aws_api_gateway_account" "bitbucket_listener" {
   cloudwatch_role_arn = aws_iam_role.bitbucket_listener.arn
+}
+
+resource "aws_lambda_event_source_mapping" "bitbucket_listener" {
+  event_source_arn = aws_sqs_queue.bitbucket_listener.arn
+  function_name    = aws_lambda_function.bitbucket_listener.arn
 }
