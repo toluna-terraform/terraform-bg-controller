@@ -72,6 +72,6 @@ phases:
 artifacts:
   files:
     - '**/*'
-  s3-prefix: ${env_name}/${pipeline_type}
+  s3-prefix: ${env_name}
   discard-paths: no
   name: source_artifacts.zip
