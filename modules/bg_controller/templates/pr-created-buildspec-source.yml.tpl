@@ -7,8 +7,8 @@ phases:
       - yum install -y yum-utils
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
       - yum -y install terraform consul
-      - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | awk -F/ '{print $NF}')
-      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | awk -F/ '{print $NF}')
+      - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
+      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
       - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
       - USER=$(echo $(aws ssm get-parameter --name /app/bb_user --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
@@ -72,6 +72,5 @@ phases:
 artifacts:
   files:
     - '**/*'
-  s3-prefix: ${env_name}
   discard-paths: no
-  name: source_artifacts.zip
+  name: ${env_name}/source_artifacts.zip
