@@ -21,6 +21,7 @@ phases:
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
           
   build:
+    on-failure: ABORT
     commands:
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
