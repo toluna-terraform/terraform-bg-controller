@@ -19,6 +19,13 @@ phases:
       - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
+      - |
+        echo "checking if sync is needed" 
+        git merge origin/$base| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" ||  SYNC_NEEDED="true"
+        if [[ $SYNC_NEEDED == "true" ]]; then
+          git push
+          aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+        fi
           
   build:
     on-failure: ABORT
@@ -56,6 +63,11 @@ phases:
   post_build:
     commands:
       - |
+        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
+        if [[ ! -z $tests_changed ]]; then
+          aws s3 cp tests/postman s3://${app_name}-${env_type}-postman-tests/ --recursive
+        fi
+      - |
         src_changed=$(grep service/ "/tmp/diff_results.txt")
         if [[ -z $src_changed ]]; then
           echo "false" > src_changed.txt
@@ -71,8 +83,9 @@ phases:
         fi
       - echo $NEXT_COLOR > color.txt
       - echo $head > head.txt
-
-      
+      - |
+        COMMIT_ID=$(git rev-parse --short origin/$head)
+        consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
 artifacts:
   files:
     - '**/*'
