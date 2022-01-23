@@ -70,6 +70,7 @@ phases:
           echo "false" > build.txt
         fi
       - echo $NEXT_COLOR > color.txt
+      - echo $head > head.txt
 
       
 artifacts:
