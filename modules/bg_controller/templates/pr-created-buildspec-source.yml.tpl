@@ -28,6 +28,7 @@ phases:
         fi
           
   build:
+    on-failure: ABORT
     commands:
       - |
         if [[ "${is_managed_env}" == "true" ]]; then

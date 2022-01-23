@@ -28,3 +28,10 @@ module "source_blue_green" {
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
 }
+
+/* module "bitbucket_listner" {
+  source = "./modules/bitbucket_listener"
+  env_type = "${var.env_type}"
+  app_name = "${var.app_name}"
+  domain = "${var.domain}"
+} */
