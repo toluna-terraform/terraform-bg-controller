@@ -21,6 +21,7 @@ phases:
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
         
   build:
+    on-failure: ABORT
     commands:
       - |
         INFRA_CHANGED=$(consul kv get "infra/${app_name}-${env_name}/infra_changed")
@@ -49,7 +50,7 @@ phases:
           terraform workspace select shared-${env_type}
           terraform init
           terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
-          terraform apply -target=module.dns -auto-approve .tf-plan
+          terraform apply -target=module.dns -auto-approve .tf-plan || exit 1
           cd terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then

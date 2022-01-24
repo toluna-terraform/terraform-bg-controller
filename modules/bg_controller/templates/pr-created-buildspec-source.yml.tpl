@@ -61,14 +61,14 @@ phases:
             if [[ $CURRENT_COLOR == "green" ]]; then
               terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
               terraform init
-              terraform plan -detailed-exitcode -out=.tf-plan
-              terraform apply -auto-approve .tf-plan
+              terraform plan -detailed-exitcode -out=.tf-plan || exit 1
+              terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="blue"
             else 
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
-              terraform plan -detailed-exitcode -out=.tf-plan
-              terraform apply -auto-approve .tf-plan
+              terraform plan -detailed-exitcode -out=.tf-plan || exit 1
+              terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
             fi
           fi
