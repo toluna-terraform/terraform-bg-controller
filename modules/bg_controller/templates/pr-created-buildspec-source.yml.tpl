@@ -76,6 +76,7 @@ phases:
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
             fi
+            cd -
           fi
         fi
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
