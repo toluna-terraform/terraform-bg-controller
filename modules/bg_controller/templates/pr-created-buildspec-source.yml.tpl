@@ -42,6 +42,7 @@ phases:
           aws s3 cp tests/postman s3://${app_name}-${env_type}-postman-tests/ --recursive
         fi  
   build:
+    on-failure: ABORT
     commands:
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
@@ -75,6 +76,7 @@ phases:
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
       
   post_build:
+    on-failure: ABORT
     commands:
       - |
         src_changed=$(grep service/ "/tmp/diff_results.txt")
