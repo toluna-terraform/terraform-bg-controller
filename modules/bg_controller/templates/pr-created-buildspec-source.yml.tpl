@@ -8,8 +8,9 @@ env:
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
     MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_project_id"
-    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
-    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
+    MONGODB_ATLAS_PUBLIC_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
+    MONGODB_ATLAS_PRIVATE_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
+    MONGODB_ATLAS_ORG_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_org_id"
   
 phases:
   pre_build:
@@ -22,6 +23,10 @@ phases:
       - git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
       - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
+      - export MONGODB_ATLAS_PROJECT_ID=$MONGODB_ATLAS_PROJECT_ID
+      - export MONGODB_ATLAS_PUBLIC_KEY=$MONGODB_ATLAS_PUBLIC_KEY
+      - export MONGODB_ATLAS_PRIVATE_KEY=$MONGODB_ATLAS_PRIVATE_KEY
+      - export MONGODB_ATLAS_ORG_ID=$MONGODB_ATLAS_ORG_ID
       - |
         echo "checking if sync is needed"
         git config --global user.email "$USER"
@@ -61,13 +66,13 @@ phases:
             if [[ $CURRENT_COLOR == "green" ]]; then
               terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
               terraform init
-              terraform plan -detailed-exitcode -out=.tf-plan || exit 1
+              terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="blue"
             else 
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
-              terraform plan -detailed-exitcode -out=.tf-plan || exit 1
+              terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
             fi

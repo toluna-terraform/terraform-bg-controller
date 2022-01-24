@@ -8,8 +8,9 @@ env:
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
     MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_project_id"
-    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
-    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
+    MONGODB_ATLAS_PUBLIC_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
+    MONGODB_ATLAS_PRIVATE_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
+    MONGODB_ATLAS_ORG_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_org_id"
 
 phases:
   pre_build:
@@ -19,6 +20,10 @@ phases:
       - yum -y install terraform
       - yum install -y yum-utils consul
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
+      - export MONGODB_ATLAS_PROJECT_ID=$MONGODB_ATLAS_PROJECT_ID
+      - export MONGODB_ATLAS_PUBLIC_KEY=$MONGODB_ATLAS_PUBLIC_KEY
+      - export MONGODB_ATLAS_PRIVATE_KEY=$MONGODB_ATLAS_PRIVATE_KEY
+      - export MONGODB_ATLAS_ORG_ID=$MONGODB_ATLAS_ORG_ID
         
   build:
     on-failure: ABORT
