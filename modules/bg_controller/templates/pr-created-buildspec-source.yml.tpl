@@ -10,8 +10,7 @@ env:
     MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_project_id"
     MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
     MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
-  git-credential-helper: yes
-
+  
 phases:
   pre_build:
     commands:
