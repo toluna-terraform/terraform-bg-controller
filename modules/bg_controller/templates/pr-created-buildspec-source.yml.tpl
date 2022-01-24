@@ -37,7 +37,11 @@ phases:
           echo "Codebuild will now stop and restart from synced branch."
           aws codebuild stop-build --id $CODEBUILD_BUILD_ID
         fi
-          
+      - |
+        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
+        if [[ ! -z $tests_changed ]]; then
+          aws s3 cp tests/postman s3://${app_name}-${env_type}-postman-tests/ --recursive
+        fi  
   build:
     commands:
       - |
@@ -73,11 +77,6 @@ phases:
       
   post_build:
     commands:
-      - |
-        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
-        if [[ ! -z $tests_changed ]]; then
-          aws s3 cp tests/postman s3://${app_name}-${env_type}-postman-tests/ --recursive
-        fi
       - |
         src_changed=$(grep service/ "/tmp/diff_results.txt")
         if [[ -z $src_changed ]]; then
