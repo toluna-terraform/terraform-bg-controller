@@ -1,6 +1,17 @@
 # code_build spec for pulling source from BitBucket
 version: 0.2
 
+env:
+  parameter-store:
+    USER: "/app/bb_user"  
+    PASS: "/app/bb_app_pass"
+    CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
+    CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
+    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_project_id"
+    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
+    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
+  git-credential-helper: yes
+
 phases:
   pre_build:
     commands:
@@ -11,19 +22,19 @@ phases:
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
       - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
-      - USER=$(echo $(aws ssm get-parameter --name /app/bb_user --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
-      - PASS=$(echo $(aws ssm get-parameter --name /app/bb_pass --with-decryption) | python3 -c "import sys, json; print(json.load(sys.stdin)['Parameter']['Value'])")
-      - export CONSUL_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_project_id" --with-decryption --query 'Parameter.Value' --output text)
-      - export CONSUL_HTTP_TOKEN=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/consul_http_token" --with-decryption --query 'Parameter.Value' --output text)
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
-      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_project_id" --with-decryption --query 'Parameter.Value' --output text)
-      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_public_key" --with-decryption --query 'Parameter.Value' --output text)
-      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameter --name "/infra/${app_name}-${env_type}/mongodb_atlas_private_key" --with-decryption --query 'Parameter.Value' --output text)
       - |
-        echo "checking if sync is needed" 
-        git merge origin/$base| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" ||  SYNC_NEEDED="true"
+        echo "checking if sync is needed"
+        git config --global user.email "$USER"
+        git config --global user.name "$USER"
+        base_url=$(git config --get remote.origin.url)
+        bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$USER':'$PASS'@/')
+        git remote set-url origin $bb_url.git
+        git checkout $head
+        git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
         if [[ $SYNC_NEEDED == "true" ]]; then
-          git push
+          git push --set-upstream origin $head
+          echo "Codebuild will now stop and restart from synced branch."
           aws codebuild stop-build --id $CODEBUILD_BUILD_ID
         fi
           
@@ -59,6 +70,7 @@ phases:
           fi
         fi
       - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
+      
   post_build:
     commands:
       - |
@@ -85,6 +97,7 @@ phases:
       - |
         COMMIT_ID=$(git rev-parse --short origin/$head)
         consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
+
 artifacts:
   files:
     - '**/*'
