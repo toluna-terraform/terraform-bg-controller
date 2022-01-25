@@ -49,6 +49,7 @@ phases:
   build:
     on-failure: ABORT
     commands:
+      - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
           tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
@@ -69,12 +70,14 @@ phases:
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="blue"
+              artifact_prefix="${env_name}-blue"
             else 
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
+              artifact_prefix="${env_name}-green"
             fi
             cd -
           fi
@@ -108,4 +111,4 @@ artifacts:
   files:
     - '**/*'
   discard-paths: no
-  name: ${env_name}/source_artifacts.zip
+  name: $artifact_prefix/source_artifacts.zip
