@@ -97,9 +97,9 @@ phases:
       - echo $PR_NUMBER > pr.txt
       - | 
         if [[ "${pipeline_type}" == "ci" ]]; then
-          echo "true" > build.txt
+          echo "true" > ci.txt
         else
-          echo "false" > build.txt
+          echo "false" > ci.txt
         fi
       - echo $NEXT_COLOR > color.txt
       - echo $head > head.txt
