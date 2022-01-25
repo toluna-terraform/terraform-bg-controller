@@ -106,6 +106,7 @@ phases:
       - |
         COMMIT_ID=$(git rev-parse --short origin/$head)
         consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
+        echo $COMMIT_ID > commit_id.txt
 
 artifacts:
   files:
