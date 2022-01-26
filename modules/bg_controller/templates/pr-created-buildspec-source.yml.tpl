@@ -27,7 +27,7 @@ phases:
       - export MONGODB_ATLAS_PUBLIC_KEY=$MONGODB_ATLAS_PUBLIC_KEY
       - export MONGODB_ATLAS_PRIVATE_KEY=$MONGODB_ATLAS_PRIVATE_KEY
       - export MONGODB_ATLAS_ORG_ID=$MONGODB_ATLAS_ORG_ID
-      - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status'))
+      - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
       - |
         echo "checking for running deployments"
         if [ "$${#inprogress[@]}" -gt 0 ]; then
