@@ -7,6 +7,7 @@ locals {
 
 resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
   project_name = aws_codebuild_project.pr_codebuild.name
+  build_type   = "BUILD"
   filter_group {
     filter {
       type    = "EVENT"
@@ -27,6 +28,7 @@ resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
 
 resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
   project_name = aws_codebuild_project.merge_codebuild.name
+  build_type   = "BUILD"
   filter_group {
     filter {
       type    = "EVENT"

@@ -28,3 +28,9 @@ module "source_blue_green" {
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
 }
+
+module "merge_waiter" {
+  source = "./modules/merge_waiter"
+  app_name = "${var.app_name}"
+  env_type = "${var.env_type}"
+}
