@@ -30,7 +30,7 @@ phases:
       - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status'))
       - |
         echo "checking for running deployments"
-        if [ "$${#inprogress[@]}" -gt 1 ] || [ "$${#inprogress[@]}" -eq 1 ]; then
+        if [ "$${#inprogress[@]}" -gt 0 ]; then
           COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
           curl --request POST --url $COMMENT_URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
           DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
