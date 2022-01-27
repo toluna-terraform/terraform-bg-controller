@@ -30,6 +30,9 @@ module "source_blue_green" {
   trigger_branch = "${each.value.pipeline_branch}"
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
+  depends_on = [
+      aws_s3_bucket.codepipeline_bucket
+  ]
 }
 
 module "merge_waiter" {
