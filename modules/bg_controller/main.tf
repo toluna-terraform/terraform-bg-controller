@@ -155,4 +155,7 @@ resource "aws_s3_bucket_object" "folder" {
     bucket = "s3-codepipeline-${var.app_name}-${var.env_type}"
     acl    = "private"
     key    = "${var.env_name}/${var.pipeline_type}"
+    depends_on = [
+      aws_s3_bucket.codepipeline_bucket
+    ]
 }
