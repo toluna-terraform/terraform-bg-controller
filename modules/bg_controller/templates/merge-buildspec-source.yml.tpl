@@ -54,13 +54,13 @@ phases:
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
           consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
           echo "Shifting traffic"
-          cd ../shared
+          cd $CODEBUILD_SRC_DIR/terraform/shared
           terraform init
           terraform workspace select shared-${env_type}
           terraform init
           terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
           terraform apply -target=module.dns -auto-approve .tf-plan || exit 1
-          cd terraform/app
+          cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then
             terraform workspace select ${env_name}
@@ -68,7 +68,7 @@ phases:
             terraform workspace select ${env_name}-$CURRENT_COLOR
           fi
           echo "Destroying old environment"
-          cd ../app
+          cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           terraform destroy -auto-approve
           terraform workspace select ${env_name}-$NEXT_COLOR
