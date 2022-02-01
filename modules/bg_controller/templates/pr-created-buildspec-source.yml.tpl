@@ -69,6 +69,7 @@ phases:
             TF_CHANGED="true"
           fi
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+          artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $TF_CHANGED"
           if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
             cd terraform/app
