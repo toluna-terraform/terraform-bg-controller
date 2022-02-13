@@ -19,9 +19,17 @@ phases:
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
       - yum -y install terraform consul
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-      - git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
-      - PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
+      - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
+          git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
+        fi
+      - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
+        else
+          PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
+        fi
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
       - export MONGODB_ATLAS_PROJECT_ID=$MONGODB_ATLAS_PROJECT_ID
       - export MONGODB_ATLAS_PUBLIC_KEY=$MONGODB_ATLAS_PUBLIC_KEY
@@ -29,27 +37,31 @@ phases:
       - export MONGODB_ATLAS_ORG_ID=$MONGODB_ATLAS_ORG_ID
       - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
       - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
         echo "checking for running deployments"
-        if [ "$${#inprogress[@]}" -gt 0 ]; then
-          COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-          curl --request POST --url $COMMENT_URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
-          DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
-          curl -X POST -u "$USER:$PASS" $DECLINE_URL --data-raw ''
-          aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          if [ "$${#inprogress[@]}" -gt 0 ]; then
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            curl --request POST --url $COMMENT_URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
+            DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
+            curl -X POST -u "$USER:$PASS" $DECLINE_URL --data-raw ''
+            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          fi
         fi
       - |
-        echo "checking if sync is needed"
-        git config --global user.email "$USER"
-        git config --global user.name "$USER"
-        base_url=$(git config --get remote.origin.url)
-        bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$USER':'$PASS'@/')
-        git remote set-url origin $bb_url.git
-        git checkout $head
-        git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
-        if [[ $SYNC_NEEDED == "true" ]]; then
-          git push --set-upstream origin $head
-          echo "Codebuild will now stop and restart from synced branch."
-          aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          echo "checking if sync is needed"
+          git config --global user.email "$USER"
+          git config --global user.name "$USER"
+          base_url=$(git config --get remote.origin.url)
+          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$USER':'$PASS'@/')
+          git remote set-url origin $bb_url.git
+          git checkout $head
+          git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
+          if [[ $SYNC_NEEDED == "true" ]]; then
+            git push --set-upstream origin $head
+            echo "Codebuild will now stop and restart from synced branch."
+            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          fi
         fi
       - |
         tests_changed=$(grep tests/ "/tmp/diff_results.txt")
@@ -93,21 +105,24 @@ phases:
             cd -
           fi
         fi
-      - consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
+      - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
+        fi
       
   post_build:
     on-failure: ABORT
     commands:
       - |
         src_changed=$(grep service/ "/tmp/diff_results.txt")
-        if [[ -z $src_changed ]]; then
+        if [[ -z $src_changed ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
         else 
           echo "true" > src_changed.txt
         fi
       - echo $PR_NUMBER > pr.txt
       - | 
-        if [[ "${pipeline_type}" == "ci" ]]; then
+        if [[ "${pipeline_type}" == "ci" ]] || [[ "${pipeline_type}" == "dev" ]]; then
           echo "true" > ci.txt
         else
           echo "false" > ci.txt
@@ -115,9 +130,13 @@ phases:
       - echo $NEXT_COLOR > color.txt
       - echo $head > head.txt
       - |
-        COMMIT_ID=$(git rev-parse --short origin/$head)
-        consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
-        echo $COMMIT_ID > commit_id.txt
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          COMMIT_ID=$(git rev-parse --short origin/$head)
+          consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
+          echo $COMMIT_ID > commit_id.txt
+        else 
+          echo $CODEBUILD_WEBHOOK_PREV_COMMIT > commit_id.txt
+        fi
 artifacts:
   files:
     - '**/*'

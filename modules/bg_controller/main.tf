@@ -11,17 +11,17 @@ resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
   filter_group {
     filter {
       type    = "EVENT"
-      pattern = "PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED"
+      pattern = var.pipeline_type == "dev" ? "PUSH":"PULL_REQUEST_CREATED,PULL_REQUEST_UPDATED"
     }
 
     filter {
-      type    = "BASE_REF"
+      type    = var.pipeline_type == "dev" ? "HEAD_REF" : "BASE_REF"
       pattern = var.trigger_branch
     }
 
     filter {
       type    = "FILE_PATH"
-      pattern = "${var.path_pattern}"
+      pattern = var.pipeline_type == "dev" ? ".*" : "${var.path_pattern}"
     }
   }
 }
