@@ -28,7 +28,7 @@ resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
 
 resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
   count = var.pipeline_type == "dev" ? 0 : 1
-  project_name = aws_codebuild_project.merge_codebuild.name
+  project_name = aws_codebuild_project.merge_codebuild[count.index].name
   build_type   = "BUILD"
   filter_group {
     filter {
