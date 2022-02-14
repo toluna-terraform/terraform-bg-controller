@@ -27,6 +27,7 @@ resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
 }
 
 resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
+  count = var.pipeline_type == "dev" ? 0 : 1
   project_name = aws_codebuild_project.merge_codebuild.name
   build_type   = "BUILD"
   filter_group {
@@ -48,7 +49,7 @@ resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
 }
 
 resource "aws_codebuild_project" "pr_codebuild" {
-  name          = "${local.prefix}-${local.codebuild_name}-pr-${local.suffix}"
+  name          = var.pipeline_type == "dev" ? "${local.prefix}-${local.codebuild_name}-push-${local.suffix}" : "${local.prefix}-${local.codebuild_name}-pr-${local.suffix}"
   description   = "Pull source files from Git repo"
   build_timeout = "120"
   service_role  = aws_iam_role.source_codebuild_iam_role.arn
@@ -88,6 +89,7 @@ resource "aws_codebuild_project" "pr_codebuild" {
 }
 
 resource "aws_codebuild_project" "merge_codebuild" {
+  count = var.pipeline_type == "dev" ? 0 : 1
   name          = "${local.prefix}-${local.codebuild_name}-merge-${local.suffix}"
   description   = "Pull source files from Git repo"
   build_timeout = "120"
