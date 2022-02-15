@@ -147,13 +147,21 @@ resource "aws_s3_bucket" "source_codebuild_bucket" {
     UseWithCodeDeploy = true
     created_by        = "terraform"
   })
-  versioning {
-    enabled = true
+}
+
+resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
+  bucket = aws_s3_bucket.source_codebuild_bucket.id
+  acl    = "private"
+}
+
+resource "aws_s3_bucket_versioning" "source_codebuild_bucket" {
+  bucket = aws_s3_bucket.source_codebuild_bucket.id
+  versioning_configuration {
+    status = "Enabled"
   }
 }
 
-
-resource "aws_s3_bucket_object" "folder" {
+resource "aws_s3_object" "folder" {
     bucket = "s3-codepipeline-${var.app_name}-${var.env_type}"
     acl    = "private"
     key    = "${var.env_name}/${var.pipeline_type}"
