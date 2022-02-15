@@ -141,7 +141,6 @@ resource "aws_iam_role_policy_attachment" "source_codebuild_iam_policy" {
 
 resource "aws_s3_bucket" "source_codebuild_bucket" {
   bucket        = "s3-codepipeline-${var.app_name}-${var.env_type}"
-  acl           = "private"
   force_destroy = true
   tags = tomap({
     UseWithCodeDeploy = true
