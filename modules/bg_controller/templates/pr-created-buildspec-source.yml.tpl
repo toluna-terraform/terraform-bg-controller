@@ -130,13 +130,9 @@ phases:
       - echo $NEXT_COLOR > color.txt
       - echo $head > head.txt
       - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
-          COMMIT_ID=$(git rev-parse --short origin/$head)
-          consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
-          echo $COMMIT_ID > commit_id.txt
-        else 
-          echo $CODEBUILD_WEBHOOK_PREV_COMMIT > commit_id.txt
-        fi
+        COMMIT_ID=$(git rev-parse --short origin/$head)
+        consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
+        echo $COMMIT_ID > commit_id.txt
 artifacts:
   files:
     - '**/*'
