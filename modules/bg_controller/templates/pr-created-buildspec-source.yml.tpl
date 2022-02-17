@@ -130,7 +130,7 @@ phases:
       - echo $NEXT_COLOR > color.txt
       - echo $head > head.txt
       - |
-        COMMIT_ID=$(git rev-parse --short origin/$head)
+        COMMIT_ID=$${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
         consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
         echo $COMMIT_ID > commit_id.txt
 artifacts:
