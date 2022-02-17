@@ -18,6 +18,14 @@ resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
   ]
 }
 
+resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  acl    = "private"
+  depends_on = [
+      aws_s3_bucket.codepipeline_bucket
+  ]
+}
+
 module "source_blue_green" {
   for_each = var.apps
   source = "./modules/bg_controller"
@@ -30,6 +38,7 @@ module "source_blue_green" {
   trigger_branch = "${each.value.pipeline_branch}"
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
+  bucket_id = aws_s3_bucket.codepipeline_bucket.id
   depends_on = [
       aws_s3_bucket.codepipeline_bucket
   ]

@@ -33,3 +33,7 @@ variable "source_repository" {
 variable "is_managed_env" {
     type = string
 }
+
+variable "bucket_id" {
+  type = string
+}

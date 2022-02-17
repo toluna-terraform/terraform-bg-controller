@@ -139,29 +139,8 @@ resource "aws_iam_role_policy_attachment" "source_codebuild_iam_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess" // this policy should be changed to a new policy.
 }
 
-resource "aws_s3_bucket" "source_codebuild_bucket" {
-  bucket        = "s3-codepipeline-${var.app_name}-${var.env_type}"
-  force_destroy = true
-  tags = tomap({
-    UseWithCodeDeploy = true
-    created_by        = "terraform"
-  })
-}
-
-resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
-  bucket = aws_s3_bucket.source_codebuild_bucket.id
-  acl    = "private"
-}
-
-resource "aws_s3_bucket_versioning" "source_codebuild_bucket" {
-  bucket = aws_s3_bucket.source_codebuild_bucket.id
-  versioning_configuration {
-    status = "Enabled"
-  }
-}
-
 resource "aws_s3_object" "folder" {
-    bucket = "s3-codepipeline-${var.app_name}-${var.env_type}"
+    bucket = var.bucket_id
     acl    = "private"
     key    = "${var.env_name}/${var.pipeline_type}"
 }
