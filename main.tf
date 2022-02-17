@@ -6,6 +6,15 @@ resource "aws_s3_bucket" "codepipeline_bucket" {
     created_by        = "terraform"
   })
 }
+resource "aws_s3_bucket_versioning" "codepipeline_bucket" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  versioning_configuration {
+    status = "Enabled"
+  }
+  depends_on = [
+      aws_s3_bucket.codepipeline_bucket
+  ]
+}
 
 resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
@@ -14,7 +23,7 @@ resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
   ignore_public_acls  = true
   restrict_public_buckets = true
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket
+      aws_s3_bucket.codepipeline_bucket,aws_s3_bucket_versioning.codepipeline_bucket
   ]
 }
 
@@ -22,7 +31,7 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket
+      aws_s3_bucket.codepipeline_bucket,aws_s3_bucket_versioning.codepipeline_bucket
   ]
 }
 
