@@ -6,13 +6,8 @@ env:
     USER: "/app/bb_user"  
     PASS: "/app/bb_app_pass"
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
-    CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
     DEPLOYMENT_ID: "/infra/${app_name}-${env_name}/deployment_id"
     HOOK_EXECUTION_ID: "/infra/${app_name}-${env_name}/hook_execution_id"
-    MONGODB_ATLAS_PROJECT_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_project_id"
-    MONGODB_ATLAS_PUBLIC_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_public_key"
-    MONGODB_ATLAS_PRIVATE_KEY: "/infra/${app_name}-${env_type}/mongodb_atlas_private_key"
-    MONGODB_ATLAS_ORG_ID: "/infra/${app_name}-${env_type}/mongodb_atlas_org_id"
 
 phases:
   pre_build:
@@ -22,10 +17,10 @@ phases:
       - yum -y install terraform
       - yum install -y yum-utils consul
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
-      - export MONGODB_ATLAS_PROJECT_ID=$MONGODB_ATLAS_PROJECT_ID
-      - export MONGODB_ATLAS_PUBLIC_KEY=$MONGODB_ATLAS_PUBLIC_KEY
-      - export MONGODB_ATLAS_PRIVATE_KEY=$MONGODB_ATLAS_PRIVATE_KEY
-      - export MONGODB_ATLAS_ORG_ID=$MONGODB_ATLAS_ORG_ID
+      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
       - aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
         
