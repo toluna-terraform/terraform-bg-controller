@@ -110,7 +110,7 @@ phases:
     on-failure: ABORT
     commands:
       - |
-        src_changed=$(grep service/ "/tmp/diff_results.txt")
+        src_changed=$(grep -v -E 'terraform|tests' "/tmp/diff_results.txt")
         if [[ -z $src_changed ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
         else 
