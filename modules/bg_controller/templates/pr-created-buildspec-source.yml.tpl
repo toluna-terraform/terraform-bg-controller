@@ -6,6 +6,7 @@ env:
     USER: "/app/bb_user"  
     PASS: "/app/bb_app_pass"
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
+    CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
   
 phases:
   pre_build:
