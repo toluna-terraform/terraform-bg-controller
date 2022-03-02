@@ -2,6 +2,8 @@ const AWS = require('aws-sdk');
 const ssm = new AWS.SSM({apiVersion: '2014-11-06', region: 'us-east-1' });
 const cd = new AWS.CodeDeploy({ apiVersion: '2014-10-06', region: 'us-east-1' });
 
+let environment;
+
 exports.handler = async function (event, context, callback) {
   console.log('event', event);
   const deploymentId = event.DeploymentId;
@@ -14,11 +16,16 @@ exports.handler = async function (event, context, callback) {
       { 
         console.log(err, err.stack); // an error occurred
       }
-      else {
+    else {
         console.log(data);
       }// successful response
       }).promise();
-  const environment = env_name.deploymentInfo.applicationName.split("-")[2];
+    if (env_name.deploymentInfo.deploymentConfigName == 'CodeDeployDefault.ECSAllAtOnce'){
+      environment = env_name.deploymentInfo.applicationName.replace("ecs-deploy.", "");
+    }
+    if (env_name.deploymentInfo.deploymentConfigName == 'CodeDeployDefault.LambdaAllAtOnce'){
+      environment = env_name.deploymentInfo.applicationName.split("-")[1];
+    };
   var deployment_params = {
       Name: `/infra/${process.env.APP_NAME}-${environment}/deployment_id`,
       Value: `${deploymentId}`, 
