@@ -12,20 +12,20 @@ exports.handler = async function (event, context, callback) {
     deploymentId: deploymentId /* required */
   };
   let env_name = await cd.getDeployment(params, function(err, data) {
-    if (err) 
-      { 
-        console.log(err, err.stack); // an error occurred
-      }
-    else {
-        console.log(data);
-      }// successful response
-      }).promise();
-    if (env_name.deploymentInfo.deploymentConfigName == 'CodeDeployDefault.ECSAllAtOnce'){
-      environment = env_name.deploymentInfo.applicationName.replace("ecs-deploy-", "");
+  if (err) 
+    { 
+      console.log(err, err.stack); // an error occurred
     }
-    if (env_name.deploymentInfo.deploymentConfigName == 'CodeDeployDefault.LambdaAllAtOnce'){
-      environment = env_name.deploymentInfo.applicationName.split("-")[1];
-    };
+  else {
+      console.log(data);
+    }// successful response
+    }).promise();
+  if (env_name.deploymentInfo.deploymentConfigName.includes('CodeDeployDefault.ECS')){
+    environment = env_name.deploymentInfo.applicationName.replace("ecs-deploy-", "");
+  };
+  if (env_name.deploymentInfo.deploymentConfigName.includes('CodeDeployDefault.Lambda')){
+    environment = env_name.deploymentInfo.applicationName.split("-")[1];
+  };
   var deployment_params = {
       Name: `/infra/${process.env.APP_NAME}-${environment}/deployment_id`,
       Value: `${deploymentId}`, 
