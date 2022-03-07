@@ -26,7 +26,7 @@ phases:
         else
           PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
         fi
-      - export AWS_PROFILE=${app_name}-${env_type}
+      - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${app_name}-${env_type}
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
       - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
