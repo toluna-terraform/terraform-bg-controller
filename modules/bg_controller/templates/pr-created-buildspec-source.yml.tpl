@@ -20,6 +20,7 @@ phases:
           base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
           git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
         fi
+      - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}/source_artifacts.zip
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
