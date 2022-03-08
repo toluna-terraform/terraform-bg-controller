@@ -78,7 +78,6 @@ phases:
             TF_CHANGED="true"
           fi
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
-          artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $TF_CHANGED"
           if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
             cd terraform/app
@@ -90,14 +89,12 @@ phases:
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="blue"
-              artifact_prefix="${env_name}-blue"
             else 
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
-              artifact_prefix="${env_name}-green"
             fi
             cd -
           fi
