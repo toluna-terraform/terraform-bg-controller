@@ -14,20 +14,21 @@ phases:
       - yum install -y yum-utils
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
       - yum -y install terraform consul
+      - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}/source_artifacts.zip
+      - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-green/source_artifacts.zip
+      - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
           git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
         fi
-      - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}/source_artifacts.zip
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
         else
           PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
         fi
-      - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${app_name}-${env_type}
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
       - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
@@ -79,6 +80,7 @@ phases:
             TF_CHANGED="true"
           fi
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+          artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $TF_CHANGED"
           if [[ "${pipeline_type}" == "ci" ]] || [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
             cd terraform/app
@@ -90,12 +92,14 @@ phases:
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="blue"
+              artifact_prefix="${env_name}-blue"
             else 
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
               terraform plan -detailed-exitcode -out=.tf-plan
               terraform apply -auto-approve .tf-plan || exit 1
               NEXT_COLOR="green"
+              artifact_prefix="${env_name}-green"
             fi
             cd -
           fi
