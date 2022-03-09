@@ -58,8 +58,7 @@ phases:
           terraform init
           terraform workspace select shared-${env_type}
           terraform init
-          terraform plan -target=module.dns -detailed-exitcode -out=.tf-plan
-          terraform apply -target=module.dns -auto-approve .tf-plan || exit 1
+          terraform apply -target=module.dns -auto-approve || exit 1
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then
