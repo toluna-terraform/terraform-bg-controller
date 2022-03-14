@@ -3,8 +3,8 @@ version: 0.2
 
 env:
   parameter-store:
-    USER: "/app/bb_user"  
-    PASS: "/app/bb_app_pass"
+    BB_USER: "/app/bb_user"  
+    BB_PASS: "/app/bb_app_pass"
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
   
@@ -41,9 +41,9 @@ phases:
         echo "checking for running deployments"
           if [ "$${#inprogress[@]}" -gt 0 ]; then
             COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-            curl --request POST --url $COMMENT_URL -u "$USER:$PASS" --header "Accept:application/json" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
+            curl --request POST --url $COMMENT_URL --header "Authorization:Basic $BB_TOKEN" -u "$BB_USER:$BB_PASS" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
             DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
-            curl -X POST -u "$USER:$PASS" $DECLINE_URL --data-raw ''
+            curl -X POST $DECLINE_URL -u "$BB_USER:$BB_PASS" --data-raw ''
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
         fi
