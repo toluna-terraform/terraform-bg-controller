@@ -130,7 +130,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
 }
 
 resource "aws_iam_role" "source_codebuild_iam_role" {
-  name               = "role-${local.codebuild_name}-bg-${var.env_name}"
+  name               = "role-${var.app_name}-${var.env_type}-${local.codebuild_name}-bg-${var.env_name}"
   assume_role_policy = data.aws_iam_policy_document.codebuild_assume_role_policy.json
 }
 

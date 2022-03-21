@@ -15,7 +15,7 @@ resource "aws_lambda_function" "merge_waiter" {
 
 # IAM
 resource "aws_iam_role" "merge_waiter" {
-  name = "merge_waiter"
+  name = "${var.app_name}_${var.env_type}-merge-waitermerge_waiter"
 
   assume_role_policy = <<POLICY
 {
