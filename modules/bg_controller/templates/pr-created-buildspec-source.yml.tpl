@@ -50,10 +50,10 @@ phases:
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           echo "checking if sync is needed"
-          git config --global user.email "$USER"
-          git config --global user.name "$USER"
+          git config --global user.email "$BB_USER"
+          git config --global user.name "$BB_USER"
           base_url=$(git config --get remote.origin.url)
-          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$USER':'$PASS'@/')
+          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
           git remote set-url origin $bb_url.git
           git checkout $head
           git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
