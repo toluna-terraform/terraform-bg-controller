@@ -20,3 +20,8 @@ variable "env_type" {
 variable "domain" {
     type = string
 }
+
+variable "app_type" {
+  default = "ecs"
+  type = string
+}

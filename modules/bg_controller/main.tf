@@ -120,7 +120,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
   source {
     type     = "BITBUCKET"
     location = local.source_repository_url
-    buildspec = templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id})
+    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id}) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id})
   }
   tags = tomap({
     Name        = "${local.prefix}-${local.codebuild_name}",

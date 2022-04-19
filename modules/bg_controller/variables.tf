@@ -14,6 +14,11 @@ variable "app_name" {
   type = string
 }
 
+variable "app_type" {
+  default = "ecs"
+  type = string
+}
+
 variable "domain" {
   type = string
 }

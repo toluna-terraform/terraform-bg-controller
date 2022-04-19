@@ -40,6 +40,7 @@ module "source_blue_green" {
   source = "./modules/bg_controller"
   env_name = "${each.key}"
   app_name = "${var.app_name}"
+  app_type = "${var.app_type}"
   env_type = "${each.value.env_type}"
   path_pattern = "${var.path_pattern}"
   domain = "${var.domain}"
