@@ -42,3 +42,7 @@ variable "is_managed_env" {
 variable "bucket_id" {
   type = string
 }
+
+variable "aws_profile" {
+  type = string
+}
