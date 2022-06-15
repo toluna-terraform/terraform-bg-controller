@@ -25,3 +25,7 @@ variable "app_type" {
   default = "ecs"
   type = string
 }
+
+variable "aws_profile" {
+  type = string
+}

@@ -79,7 +79,7 @@ resource "aws_codebuild_project" "pr_codebuild" {
   source {
     type     = "BITBUCKET"
     location = local.source_repository_url
-    buildspec = templatefile("${path.module}/templates/pr-created-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id,is_managed_env = var.is_managed_env,pipeline_type = var.pipeline_type })
+    buildspec = templatefile("${path.module}/templates/pr-created-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id,is_managed_env = var.is_managed_env,pipeline_type = var.pipeline_type, aws_profile = var.aws_profile })
   }
   tags = tomap({
     Name        = "${local.prefix}-${local.codebuild_name}",
@@ -120,7 +120,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
   source {
     type     = "BITBUCKET"
     location = local.source_repository_url
-    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id}) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id})
+    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile}) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile})
   }
   tags = tomap({
     Name        = "${local.prefix}-${local.codebuild_name}",
