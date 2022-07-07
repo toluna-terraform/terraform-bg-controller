@@ -74,6 +74,7 @@ phases:
           if [[ "$CURRENT_COLOR" == "white" ]]; then
             terraform workspace delete ${env_name}
           else
+            terraform workspace delete ${env_name} || echo "no base workspace to delete"
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
         fi
