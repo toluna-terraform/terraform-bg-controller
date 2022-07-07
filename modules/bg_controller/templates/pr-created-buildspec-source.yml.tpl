@@ -80,20 +80,25 @@ phases:
           else 
             TF_CHANGED="true"
           fi
+          consul kv get "infra/${app_name}-${env_name}/current_color || consul kv put "infra/${app_name}-${env_name}/current_color green; TF_CHANGED="true"
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
           artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $TF_CHANGED"
           if [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
-            cd terraform/app
+             cd terraform/app
             terraform init
             CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
             if [[ $CURRENT_COLOR == "green" ]]; then
+              COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+              curl --request POST --url $COMMENT_URL --header "Authorization:Basic $BB_TOKEN" -u "$BB_USER:$BB_PASS" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-blue is done.\"}}"
               terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
               terraform init
               terraform apply -auto-approve || exit 1
               NEXT_COLOR="blue"
               artifact_prefix="${env_name}-blue"
             else 
+              COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+              curl --request POST --url $COMMENT_URL --header "Authorization:Basic $BB_TOKEN" -u "$BB_USER:$BB_PASS" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-green is done.\"}}"
               terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
               terraform init
               terraform apply -auto-approve || exit 1
@@ -101,6 +106,8 @@ phases:
               artifact_prefix="${env_name}-green"
             fi
             cd -
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            curl --request POST --url $COMMENT_URL --header "Authorization:Basic $BB_TOKEN" -u "$BB_USER:$BB_PASS" --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Finished the infrastructure deployment, creation of ${app_name}-$${NEXT_COLOR} is done.\"}}"
           fi
         fi
       - |

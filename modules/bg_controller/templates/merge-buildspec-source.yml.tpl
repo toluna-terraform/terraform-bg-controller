@@ -71,7 +71,7 @@ phases:
           terraform init
           terraform destroy -auto-approve
           terraform workspace select ${env_name}-$NEXT_COLOR
-          if [[ "$CURRENT_COLOR" == "white" ]]; then
+          if [ "$CURRENT_COLOR" != "green" ] && [ "$CURRENT_COLOR" != "blue" ]; then
             terraform workspace delete ${env_name}
           else
             terraform workspace delete ${env_name}-$CURRENT_COLOR
