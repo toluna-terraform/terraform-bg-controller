@@ -131,6 +131,7 @@ phases:
         COMMIT_ID=$${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
         consul kv put "infra/${app_name}-${env_name}/commit_id" $COMMIT_ID
         echo $COMMIT_ID > commit_id.txt
+        aws ssm put-parameter --name "/infra/${app_name}-${env_name}/commit_id" --type "String" --value $COMMIT_ID --overwrite
 artifacts:
   files:
     - '**/*'
