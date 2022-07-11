@@ -40,7 +40,7 @@ exports.handler = async function (event, context, callback) {
 };
 
   var commit = {
-  Name: `/infra/bread-qac/commit_id`, 
+  Name: `/infra/${process.env.APP_NAME}-${environment}/commit_id`, 
   WithDecryption: true
 };
 
