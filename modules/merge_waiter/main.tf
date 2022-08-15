@@ -3,7 +3,7 @@ resource "aws_lambda_function" "merge_waiter" {
   function_name = "${var.app_name}-${var.env_type}-merge-waiter"
   role          = aws_iam_role.merge_waiter.arn
   handler       = "merge_waiter.handler"
-  runtime       = "nodejs12.x"
+  runtime       = "nodejs16.x"
   timeout       = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {
