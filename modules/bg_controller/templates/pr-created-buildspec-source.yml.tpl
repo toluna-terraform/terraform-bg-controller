@@ -66,8 +66,12 @@ phases:
       - |
         tests_changed=$(grep tests/ "/tmp/diff_results.txt")
         if [[ ! -z $tests_changed ]]; then
-          aws s3 cp tests/postman s3://${app_name}-${env_type}-tests/integration_tests --recursive
-          aws s3 cp tests/stress_tests s3://${app_name}-${env_type}-tests/stress-tests --recursive
+          if [ -d "tests/postman" ]; then
+            aws s3 cp tests/postman s3://${app_name}-${env_type}-tests/integration_tests --recursive
+          fi
+          if [ -d "tests/stress_tests" ]; then
+            aws s3 cp tests/stress_tests s3://${app_name}-${env_type}-tests/stress-tests --recursive
+          fi
         fi  
   build:
     on-failure: ABORT
