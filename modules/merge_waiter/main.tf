@@ -26,6 +26,7 @@ resource "aws_iam_role" "merge_waiter" {
       "Principal": {
         "Service": [
           "codedeploy.amazonaws.com",
+          "codepipeline.amazonaws.com",
           "lambda.amazonaws.com"
         ]
       },
@@ -57,3 +58,7 @@ resource "aws_iam_role_policy_attachment" "role-codedeploy" {
     policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "role-codepipeline" {
+    role       = "${aws_iam_role.merge_waiter.name}"
+    policy_arn = "arn:aws:iam::aws:policy/AWSCodePipelineFullAccess"
+}

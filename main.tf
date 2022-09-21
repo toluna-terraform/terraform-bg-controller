@@ -27,6 +27,35 @@ resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
   ]
 }
 
+data "aws_caller_identity" "current" {
+    
+}
+
+resource "aws_s3_bucket_policy" "codepipeline_bucket" {
+bucket = aws_s3_bucket.codepipeline_bucket.id
+policy = <<POLICY
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Principal": {
+                "Service":  "serverlessrepo.amazonaws.com"
+            },
+            "Action": "s3:GetObject",
+            "Resource": "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}/*",
+            "Condition" : {
+                "StringEquals": {
+                    "aws:SourceAccount": "${data.aws_caller_identity.current.account_id}"
+                }
+            }
+        }
+    ]
+}
+POLICY
+}
+
+
 resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"

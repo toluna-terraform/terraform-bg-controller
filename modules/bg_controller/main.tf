@@ -48,6 +48,28 @@ resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
   }
 }
 
+resource "aws_codebuild_webhook" "merge_dev_flow_hook_webhook" {
+  count = var.pipeline_type == "dev" && var.app_type == "sam" ? 1 : 0
+  project_name = aws_codebuild_project.merge_codebuild[count.index].name
+  build_type   = "BUILD"
+  filter_group {
+    filter {
+      type    = "EVENT"
+      pattern = "PUSH"
+    }
+
+    filter {
+      type    = "HEAD_REF"
+      pattern = var.trigger_branch
+    }
+
+    filter {
+      type    = "FILE_PATH"
+      pattern = "${var.path_pattern}"
+    }
+  }
+}
+
 resource "aws_codebuild_project" "pr_codebuild" {
   name          = var.pipeline_type == "dev" ? "${local.prefix}-${local.codebuild_name}-push-${local.suffix}" : "${local.prefix}-${local.codebuild_name}-pr-${local.suffix}"
   description   = "Pull source files from Git repo"
@@ -89,7 +111,7 @@ resource "aws_codebuild_project" "pr_codebuild" {
 }
 
 resource "aws_codebuild_project" "merge_codebuild" {
-  count = var.pipeline_type == "dev" ? 0 : 1
+  count = var.pipeline_type != "dev" || var.app_type == "sam" ? 1 : 0
   name          = "${local.prefix}-${local.codebuild_name}-merge-${local.suffix}"
   description   = "Pull source files from Git repo"
   build_timeout = "120"
@@ -120,7 +142,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
   source {
     type     = "BITBUCKET"
     location = local.source_repository_url
-    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile}) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile})
+    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile}) : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile}) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type,app_name = var.app_name,domain = var.domain,hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile})
   }
   tags = tomap({
     Name        = "${local.prefix}-${local.codebuild_name}",

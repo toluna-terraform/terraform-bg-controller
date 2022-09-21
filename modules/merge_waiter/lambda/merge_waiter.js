@@ -5,15 +5,35 @@ const https = require('https');
 
 
 let environment;
-
+let env_name;
+let env_color;
+let deploymentType;
+let deploymentId;
+let hookId;
+  
 exports.handler = async function (event, context, callback) {
   console.log('event', event);
-  const deploymentId = event.DeploymentId;
-  const hookId = event.LifecycleEventHookExecutionId
+  if (event.hasOwnProperty("DeploymentId")) {
+    deploymentId = event.DeploymentId;
+    hookId = event.LifecycleEventHookExecutionId
+    deploymentType = "ECS";
+  }
+  else if (event["CodePipeline.job"].hasOwnProperty("id")) {
+    deploymentId = event["CodePipeline.job"].id;
+    deploymentType = "SAM";
+    console.log('environment', event["CodePipeline.job"].data.actionConfiguration.configuration.UserParameters);
+    const context = event["CodePipeline.job"].data.actionConfiguration.configuration.UserParameters.split(",");
+    env_name = context[0];
+    env_color = context[1];
+    hookId = "codepipeline"
+  }
+  
+
   var params = {
     deploymentId: deploymentId /* required */
   };
-  let env_name = await cd.getDeployment(params, function(err, data) {
+  if (deploymentType == "ECS"){
+  let ecs_env_name = await cd.getDeployment(params, function(err, data) {
   if (err) 
     { 
       console.log(err, err.stack); // an error occurred
@@ -22,14 +42,13 @@ exports.handler = async function (event, context, callback) {
       console.log(data);
     }// successful response
     }).promise();
-  if (env_name.deploymentInfo.deploymentConfigName.includes('CodeDeployDefault.ECS')){
-    environment = env_name.deploymentInfo.applicationName.replace("ecs-deploy-", "");
+    environment = ecs_env_name.deploymentInfo.applicationName.replace("ecs-deploy-", "");
     environment = environment.replace("-green", "");
     environment = environment.replace("-blue", "");
   };
-  if (env_name.deploymentInfo.deploymentConfigName.includes('CodeDeployDefault.Lambda')){
-    environment = env_name.deploymentInfo.applicationName.split("-")[1];
-  };
+  if (deploymentType == "SAM"){
+    environment = `${env_name}`
+    };
     var bb_user = {
   Name: '/app/bb_user', 
   WithDecryption: true
