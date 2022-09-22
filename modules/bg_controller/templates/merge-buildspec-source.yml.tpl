@@ -77,3 +77,12 @@ phases:
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
         fi
+        if [[ "${app_type}" == "sam" ]]; then
+          echo "Shifting traffic"
+          cd $CODEBUILD_SRC_DIR/terraform/shared
+          terraform init
+          terraform workspace select shared-${env_type}
+          terraform init
+          terraform apply -target=module.dns -auto-approve || exit 1
+          aws codepipeline put-job-success-result --job-id $DEPLOYMENT_ID
+        fi

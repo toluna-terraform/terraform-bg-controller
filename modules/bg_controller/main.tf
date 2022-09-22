@@ -140,9 +140,26 @@ resource "aws_codebuild_project" "merge_codebuild" {
   }
 
   source {
-    type      = "BITBUCKET"
-    location  = local.source_repository_url
-    buildspec = var.app_type == "ecs" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type, app_name = var.app_name, domain = var.domain, hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile }) : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type, app_name = var.app_name, domain = var.domain, hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile }) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl", { env_name = var.env_name, env_type = var.env_type, app_name = var.app_name, domain = var.domain, hosted_zone_id = data.aws_route53_zone.public.zone_id, aws_profile = var.aws_profile })
+    type     = "BITBUCKET"
+    location = local.source_repository_url
+    buildspec = var.app_type == "ecs" || var.app_type == "sam" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl",
+      {
+        env_name       = var.env_name,
+        env_type       = var.env_type,
+        app_name       = var.app_name,
+        app_type       = var.app_type,
+        domain         = var.domain,
+        hosted_zone_id = data.aws_route53_zone.public.zone_id,
+        aws_profile    = var.aws_profile
+      }) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl",
+      {
+        env_name       = var.env_name,
+        env_type       = var.env_type, app_name = var.app_name,
+        domain         = var.domain,
+         app_type       = var.app_type,
+        hosted_zone_id = data.aws_route53_zone.public.zone_id,
+        aws_profile    = var.aws_profile
+    })
   }
   tags = tomap({
     Name        = "${local.prefix}-${local.codebuild_name}",
