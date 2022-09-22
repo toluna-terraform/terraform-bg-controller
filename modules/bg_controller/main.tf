@@ -156,7 +156,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
         env_name       = var.env_name,
         env_type       = var.env_type, app_name = var.app_name,
         domain         = var.domain,
-         app_type       = var.app_type,
+        app_type       = var.app_type,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
         aws_profile    = var.aws_profile
     })
