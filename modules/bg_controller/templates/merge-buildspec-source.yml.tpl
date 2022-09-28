@@ -29,7 +29,7 @@ phases:
           if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
             aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
           fi
-          else [[ "${app_type}" == "sam" ]]; then
+        elif [[ "${app_type}" == "sam" ]]; then
           echo "Shifting traffic"
           cd $CODEBUILD_SRC_DIR/terraform/shared
           terraform init
