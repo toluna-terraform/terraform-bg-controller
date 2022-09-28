@@ -114,9 +114,10 @@ phases:
             COMMENT_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Finished the infrastructure deployment, creation of ${app_name}-$${NEXT_COLOR} is done.\"}}"
           fi
-        else
-        SAM_COLOR=$(consul kv get "infra/${app_name}-${env_name}/sam_color" || echo "blue")
-        if [[ -z "$${SAM_COLOR}" ]]; then
+        fi
+      - |
+        SAM_COLOR=$(consul kv get "infra/${app_name}-${env_name}/sam_color" || echo "not-set")
+        if [[ "$${SAM_COLOR}" == "not-set" ]]; then
           NEXT_SAM_COLOR="blue"
         elif [[ "$${SAM_COLOR}" == "blue" ]]; then
           NEXT_SAM_COLOR="green"
@@ -124,12 +125,11 @@ phases:
           NEXT_SAM_COLOR="blue"
         fi
         consul kv put "infra/${app_name}-${env_name}/sam_color" $NEXT_SAM_COLOR
-          cd terraform/app
-          terraform init
-          terraform workspace select ${env_name}
-          terraform init
-          terraform apply -target=module.sam-pipeline -auto-approve || exit 1   
-        fi
+        cd terraform/app
+        terraform init
+        terraform workspace select ${env_name}
+        terraform init
+        terraform apply -target=module.sam-pipeline -auto-approve || exit 1  
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           consul kv put "infra/${app_name}-${env_name}/infra_changed" $TF_CHANGED
