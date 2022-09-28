@@ -116,7 +116,9 @@ phases:
           fi
         else
         SAM_COLOR=$(consul kv get "infra/${app_name}-${env_name}/sam_color" || echo "blue")
-        if [ "$${SAM_COLOR}" == "blue" ]; then
+        if [ -z "$${SAM_COLOR}" ]
+          NEXT_SAM_COLOR="blue"
+        elif [ "$${SAM_COLOR}" == "blue" ]; then
           NEXT_SAM_COLOR="green"
         else 
           NEXT_SAM_COLOR="blue"
