@@ -22,11 +22,21 @@ phases:
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
-      - aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
-      - |
-        DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
-        if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
-          aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
+      - | 
+        if [[ "${app_type}" != "sam" ]]; then
+          aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
+          DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
+          if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
+            aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
+          fi
+          else [[ "${app_type}" == "sam" ]]; then
+          echo "Shifting traffic"
+          cd $CODEBUILD_SRC_DIR/terraform/shared
+          terraform init
+          terraform workspace select shared-${env_type}
+          terraform init
+          terraform apply -target=module.dns -auto-approve || exit 1
+          aws codepipeline put-job-success-result --job-id $DEPLOYMENT_ID
         fi
   build:
     on-failure: ABORT
@@ -77,12 +87,4 @@ phases:
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
         fi
-        if [[ "${app_type}" == "sam" ]]; then
-          echo "Shifting traffic"
-          cd $CODEBUILD_SRC_DIR/terraform/shared
-          terraform init
-          terraform workspace select shared-${env_type}
-          terraform init
-          terraform apply -target=module.dns -auto-approve || exit 1
-          aws codepipeline put-job-success-result --job-id $DEPLOYMENT_ID
-        fi
+        
