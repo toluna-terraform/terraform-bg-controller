@@ -22,7 +22,7 @@ phases:
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           echo "checking if sync is needed"
-          SYNC_NEEDED=$(git rev-list --left-only --count origin/$base...origin/head)
+          SYNC_NEEDED=$(git rev-list --left-only --count origin/$base...origin/$head)
           if [[ "$SYNC_NEEDED" -gt 0 ]]; then
             git push --set-upstream origin $head
             echo "Codebuild will now stop and restart from synced branch."
@@ -45,8 +45,13 @@ phases:
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
-      - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+      - export CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
       - |
+        if [[ $CURRENT_COLOR == "green" ]] || [[ $CURRENT_COLOR == "blue" ]]; then
+          export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        else
+        export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        fi
         if [[ "${pipeline_type}" != "dev" ]]; then
         echo "checking for running deployments"
           if [ "$${#inprogress[@]}" -gt 0 ]; then
@@ -86,7 +91,6 @@ phases:
           if [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
              cd terraform/app
             terraform init
-            CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
             if [[ $CURRENT_COLOR == "green" ]]; then
               COMMENT_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
               curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-blue is done.\"}}"
