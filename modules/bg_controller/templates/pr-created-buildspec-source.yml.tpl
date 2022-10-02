@@ -18,9 +18,25 @@ phases:
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-green/source_artifacts.zip
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
+      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
-          base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
+          echo "checking if sync is needed"
+          git config --global user.email "$BB_USER"
+          git config --global user.name "$BB_USER"
+          base_url=$(git config --get remote.origin.url)
+          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
+          git remote set-url origin $bb_url.git
+          git checkout $head
+          git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
+          if [[ $SYNC_NEEDED == "true" ]]; then
+            git push --set-upstream origin $head
+            echo "Codebuild will now stop and restart from synced branch."
+            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          fi
+        fi
+      - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
           git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
         fi
       - |
@@ -44,22 +60,6 @@ phases:
             curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
             DECLINE_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
             curl -X POST $DECLINE_URL --data-raw ''
-            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
-          fi
-        fi
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
-          echo "checking if sync is needed"
-          git config --global user.email "$BB_USER"
-          git config --global user.name "$BB_USER"
-          base_url=$(git config --get remote.origin.url)
-          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
-          git remote set-url origin $bb_url.git
-          git checkout $head
-          git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
-          if [[ $SYNC_NEEDED == "true" ]]; then
-            git push --set-upstream origin $head
-            echo "Codebuild will now stop and restart from synced branch."
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
         fi
