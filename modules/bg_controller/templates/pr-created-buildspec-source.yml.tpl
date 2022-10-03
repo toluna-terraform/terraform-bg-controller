@@ -87,8 +87,8 @@ phases:
           consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green; TF_CHANGED="true"
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
           artifact_prefix="${env_name}-$NEXT_COLOR"
-          echo "did tf have changes $TF_CHANGED"
-          if [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
+          echo "did tf have changes $${TF_CHANGED}"
+          if [[ "${is_managed_env}" == "true" ]] && [[ "$${TF_CHANGED}" == "true" ]]; then
              cd terraform/app
             terraform init
             if [[ $CURRENT_COLOR == "green" ]]; then
