@@ -86,8 +86,8 @@ phases:
         if [[ "${is_managed_env}" == "true" ]]; then
           echo "the following files changed for PR: $${PR_NUMBER}"
           cat /tmp/diff_results.txt
-          tf_changed=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
-          if [[ "$tf_changed" -eq 1 ]]; then
+          tf_change_status=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
+          if [[ "$tf_change_status" -eq 1 ]]; then
             TF_CHANGED="false"
           else 
             TF_CHANGED="true"
