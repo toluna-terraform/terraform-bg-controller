@@ -30,6 +30,7 @@ phases:
             bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
             git remote set-url origin $bb_url.git
             git checkout $head
+            git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null || echo "PR requiers sync"
             git push --set-upstream origin $head
             echo "Codebuild will now stop and restart from synced branch."
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
