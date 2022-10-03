@@ -84,7 +84,7 @@ phases:
       - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
-          echo "the following files changed for PR: $$%{PR_NUMBER}"
+          echo "the following files changed for PR: $${PR_NUMBER}"
           cat /tmp/diff_results.txt
           tf_changed=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
           if [[ "$tf_changed" -eq 1 ]]; then
