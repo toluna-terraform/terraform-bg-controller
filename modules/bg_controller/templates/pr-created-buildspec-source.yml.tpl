@@ -63,8 +63,8 @@ phases:
           fi
         fi
       - |
-        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
-        if [[ ! -z $tests_changed ]]; then
+        tests_changed=$(grep -q "tests/" /tmp/diff_results.txt >/dev/null;echo $?)
+        if [[ "$tests_changed" -eq 0 ]]; then
           if [ -d "tests/postman" ]; then
             aws s3 cp tests/postman s3://${app_name}-${env_type}-tests/integration_tests --recursive
           fi
@@ -78,8 +78,8 @@ phases:
       - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
-          tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
-          if [[ -z $tf_changed ]]; then
+          tf_changed=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
+          if [[ "$tf_changed" -eq 1 ]]; then
             TF_CHANGED="false"
           else 
             TF_CHANGED="true"
@@ -122,8 +122,8 @@ phases:
     on-failure: ABORT
     commands:
       - |
-        src_changed=$(grep -v -E 'terraform|tests' "/tmp/diff_results.txt")
-        if [[ -z $src_changed ]] && [[ "${pipeline_type}" != "dev" ]]; then
+        src_changed=$(grep -v -E 'terraform|tests' /tmp/diff_results.txt >/dev/null;echo $?)
+        if [[ "$src_changed" -eq 0 ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
         else 
           echo "true" > src_changed.txt
