@@ -31,13 +31,12 @@ phases:
         fi
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
-          git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
-        fi
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
           export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
         else
           export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
+        fi
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          curl -L "https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
