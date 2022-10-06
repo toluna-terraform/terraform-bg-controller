@@ -92,7 +92,7 @@ phases:
           else 
             TF_CHANGED="true"
           fi
-          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green; TF_CHANGED="true"
+          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
           artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
