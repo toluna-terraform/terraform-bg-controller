@@ -131,7 +131,7 @@ phases:
     commands:
       - |
         src_changed=$(grep -v -E 'terraform|tests' /tmp/diff_results.txt >/dev/null;echo $?)
-        if [[ "$src_changed" -eq 0 ]] && [[ "${pipeline_type}" != "dev" ]]; then
+        if [[ "$src_changed" -eq 1 ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
         else 
           echo "true" > src_changed.txt
