@@ -135,7 +135,7 @@ exports.handler = async function (event, context, callback) {
     console.log("taskToken = " + taskToken1);
     let params = {
       taskToken: taskToken1,
-      output : JSON.stringify( {"output" : "success hard coded from wait_merge"} )
+      output : JSON.stringify( {"StatusCode" : "200"} )
     };
     await sf.sendTaskSuccess(params).promise();
     console.log("calledbck SF with taskToken = " + taskToken1);
