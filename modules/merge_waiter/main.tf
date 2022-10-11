@@ -57,3 +57,7 @@ resource "aws_iam_role_policy_attachment" "role-codedeploy" {
     policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess"
 }
 
+resource "aws_iam_role_policy_attachment" "attach-sf-access" {
+    role       = "${aws_iam_role.merge_waiter.name}"
+    policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
+}
