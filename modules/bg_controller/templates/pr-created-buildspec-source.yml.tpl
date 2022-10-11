@@ -24,13 +24,12 @@ phases:
           echo "checking if sync is needed"
           git config --global user.email "$BB_USER"
           git config --global user.name "$BB_USER"
-          SYNC_NEEDED=$(git rev-list --left-only --count origin/$base...origin/$head)
-          if [[ "$SYNC_NEEDED" -gt 0 ]]; then
-            base_url=$(git config --get remote.origin.url)
-            bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
-            git remote set-url origin $bb_url.git
-            git checkout $head
-            git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null || echo "PR requiers sync"
+          base_url=$(git config --get remote.origin.url)
+          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
+          git remote set-url origin $bb_url.git
+          git checkout $head
+          git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
+          if [[ $SYNC_NEEDED == "true" ]]; then
             git push --set-upstream origin $head
             echo "Codebuild will now stop and restart from synced branch."
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID

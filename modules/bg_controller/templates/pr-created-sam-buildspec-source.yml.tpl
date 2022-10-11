@@ -79,16 +79,18 @@ phases:
       - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
-          tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
-          if [[ -z $tf_changed ]]; then
+          echo "the following files changed for PR: $${PR_NUMBER}"
+          cat /tmp/diff_results.txt
+          tf_change_status=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
+          if [[ "$tf_change_status" -eq 1 ]]; then
             TF_CHANGED="false"
           else 
             TF_CHANGED="true"
           fi
-          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green; TF_CHANGED="true"
+          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
           artifact_prefix="${env_name}-$NEXT_COLOR"
-          echo "did tf have changes $TF_CHANGED"
+          echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
             cd terraform/app
             terraform init
