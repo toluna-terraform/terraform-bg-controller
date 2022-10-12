@@ -23,20 +23,10 @@ phases:
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - | 
-        if [[ "${app_type}" != "sam" ]]; then
-          aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
-          DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
-          if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
-            aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
-          fi
-        elif [[ "${app_type}" == "sam" ]]; then
-          echo "Shifting traffic"
-          cd $CODEBUILD_SRC_DIR/terraform/shared
-          terraform init
-          terraform workspace select shared-${env_type}
-          terraform init
-          terraform apply -target=module.dns -auto-approve || exit 1
-          aws codepipeline put-job-success-result --job-id $DEPLOYMENT_ID
+        aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
+        DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
+        if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
+          aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
         fi
   build:
     on-failure: ABORT
