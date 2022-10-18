@@ -18,6 +18,7 @@ phases:
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-green/source_artifacts.zip
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
+      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
@@ -118,15 +119,6 @@ phases:
           fi
         fi
       - |
-        SAM_COLOR=$(consul kv get "infra/${app_name}-${env_name}/sam_color" || echo "not-set")
-        if [[ "$${SAM_COLOR}" == "not-set" ]]; then
-          NEXT_SAM_COLOR="blue"
-        elif [[ "$${SAM_COLOR}" == "blue" ]]; then
-          NEXT_SAM_COLOR="green"
-        else 
-          NEXT_SAM_COLOR="blue"
-        fi
-        consul kv put "infra/${app_name}-${env_name}/sam_color" $NEXT_SAM_COLOR
         cd terraform/app
         terraform init
         terraform workspace select ${env_name}
