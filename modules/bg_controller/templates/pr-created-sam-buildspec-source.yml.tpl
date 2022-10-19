@@ -21,35 +21,6 @@ phases:
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
-          base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-          git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
-        fi
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
-          export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
-        else
-          export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
-        fi
-      - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
-      - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
-      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
-      - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
-        echo "checking for running deployments"
-          if [ "$${#inprogress[@]}" -gt 0 ]; then
-            COMMENT_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-            curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
-            DECLINE_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
-            curl -X POST $DECLINE_URL --data-raw ''
-            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
-          fi
-        fi
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
           echo "checking if sync is needed"
           git config --global user.email "$BB_USER"
           git config --global user.name "$BB_USER"
@@ -65,8 +36,40 @@ phases:
           fi
         fi
       - |
-        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
-        if [[ ! -z $tests_changed ]]; then
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
+        else
+          export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
+        fi
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          curl -L "https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
+        fi
+      - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
+      - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
+      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
+      - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
+      - export CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+      - |
+        if [[ $CURRENT_COLOR == "green" ]] || [[ $CURRENT_COLOR == "blue" ]]; then
+          export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        else
+        export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        fi
+        if [[ "${pipeline_type}" != "dev" ]]; then
+        echo "checking for running deployments"
+          if [ "$${#inprogress[@]}" -gt 0 ]; then
+            COMMENT_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
+            DECLINE_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
+            curl -X POST $DECLINE_URL --data-raw ''
+            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          fi
+        fi
+      - |
+        tests_changed=$(grep -q "tests/" /tmp/diff_results.txt >/dev/null;echo $?)
+        if [[ "$tests_changed" -eq 0 ]]; then
           if [ -d "tests/postman" ]; then
             aws s3 cp tests/postman s3://${app_name}-${env_type}-tests/integration_tests --recursive
           fi
