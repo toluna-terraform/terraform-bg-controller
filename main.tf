@@ -55,7 +55,7 @@ policy = <<POLICY
             "Resource": "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}/*",
             "Condition" : {
                 "StringEquals": {
-                    "aws:SourceAccount": "${var.env_type == "non-prod" ? "[${data.aws_caller_identity.current.account_id},${data.aws_caller_identity.prod.account_id}]" : "${data.aws_caller_identity.current.account_id}"}"
+                    "aws:SourceAccount":["${data.aws_caller_identity.current.account_id}","${data.aws_caller_identity.prod.account_id}"]
                 }
             }
         }
