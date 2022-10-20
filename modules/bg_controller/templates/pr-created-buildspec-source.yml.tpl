@@ -21,22 +21,6 @@ phases:
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
-          echo "checking if sync is needed"
-          git config --global user.email "$BB_USER"
-          git config --global user.name "$BB_USER"
-          base_url=$(git config --get remote.origin.url)
-          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
-          git remote set-url origin $bb_url.git
-          git checkout $head
-          COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/head)
-          if [[ $COMMITS_BEHIND -gt 0 ]]; then
-            echo "The PR is $COMMITS_BEHIND commints behind,Codebuild will now stop and restart from synced branch."
-            git push --set-upstream origin $head
-            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
-          fi
-        fi
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
           export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
         else
           export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
@@ -64,6 +48,22 @@ phases:
             curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}"
             DECLINE_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
             curl -X POST $DECLINE_URL --data-raw ''
+            aws codebuild stop-build --id $CODEBUILD_BUILD_ID
+          fi
+        fi
+      - |
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          echo "checking if sync is needed"
+          git config --global user.email "$BB_USER"
+          git config --global user.name "$BB_USER"
+          base_url=$(git config --get remote.origin.url)
+          bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
+          git remote set-url origin $bb_url.git
+          git checkout $head
+          COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/head)
+          if [[ $COMMITS_BEHIND -gt 0 ]]; then
+            echo "The PR is $COMMITS_BEHIND commints behind,Codebuild will now stop and restart from synced branch."
+            git push --set-upstream origin $head
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
         fi
