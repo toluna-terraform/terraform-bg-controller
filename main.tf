@@ -31,6 +31,15 @@ data "aws_caller_identity" "current" {
     
 }
 
+provider "aws" {
+  alias   = "prod"
+  profile = "${var.app_name}-prod"
+}
+
+data "aws_caller_identity" "prod" {
+    provider = aws.prod
+}
+
 resource "aws_s3_bucket_policy" "codepipeline_bucket" {
 bucket = aws_s3_bucket.codepipeline_bucket.id
 policy = <<POLICY
@@ -46,7 +55,7 @@ policy = <<POLICY
             "Resource": "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}/*",
             "Condition" : {
                 "StringEquals": {
-                    "aws:SourceAccount": "${data.aws_caller_identity.current.account_id}"
+                    "aws:SourceAccount": "${var.env_type == "non-prod" ? "[${data.aws_caller_identity.current.account_id},${data.aws_caller_identity.prod.account_id}]" : "${data.aws_caller_identity.current.account_id}"}"
                 }
             }
         }
