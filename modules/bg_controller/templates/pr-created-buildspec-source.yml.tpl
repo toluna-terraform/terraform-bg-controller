@@ -60,7 +60,7 @@ phases:
           bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
           git remote set-url origin $bb_url.git
           git checkout $head
-          COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/head)
+          COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/$head)
           if [[ $COMMITS_BEHIND -gt 0 ]]; then
             echo "The PR is $COMMITS_BEHIND commints behind,Codebuild will now stop and restart from synced branch."
             git push --set-upstream origin $head
