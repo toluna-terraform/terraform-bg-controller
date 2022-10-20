@@ -63,6 +63,7 @@ phases:
           COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/$head)
           if [[ $COMMITS_BEHIND -gt 0 ]]; then
             echo "The PR is $COMMITS_BEHIND commints behind,Codebuild will now stop and restart from synced branch."
+            git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null || echo "true"
             git push --set-upstream origin $head
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
