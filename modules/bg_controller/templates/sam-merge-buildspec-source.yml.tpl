@@ -30,7 +30,6 @@ phases:
           HOOK_EXECUTION_ID=$(_jq '.HookId')
           aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
         done
-        aws ssm put-parameter --name /infra/${app_name}-${env_name}/merge_details --value  '[]' --overwrite --profile ${aws_profile}
   build:
     on-failure: ABORT
     commands:
