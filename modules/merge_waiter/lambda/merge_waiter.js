@@ -94,7 +94,7 @@ exports.handler = async function (event, context, callback) {
     },
   };
 
-  // http request for the PR merge info
+  // http request to update PR merge status
   console.log("PR merge info. options = " + options);
   const resp = https.request(options, res => {
     console.log(`statusCode: ${res.statusCode}`);
@@ -104,14 +104,14 @@ exports.handler = async function (event, context, callback) {
   });
   console.log("http response = " + JSON.stringify(resp) );
 
-  req.on('error', error => {
+  resp.on('error', error => {
     console.error(error);
   });
 
   resp.write(data);
   resp.end();
 
-  // Update SSM parameters only if DeploymentType is NOT "AppMesh"
+  // Update SSM parameters only if DeploymentType != "AppMesh"
   if ( event.DeploymentType != "AppMesh") {
     var deployment_params = {
       Name: `/infra/${process.env.APP_NAME}-${environment}/deployment_id`,
