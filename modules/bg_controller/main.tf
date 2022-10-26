@@ -1,6 +1,10 @@
 locals {
   prefix = "codebuild"
   codebuild_name = "source"
+  app_name = var.app_name
+  env_name = var.env_name
+  env_type = var.env_type
+  aws_account_id = data.aws_caller_identity.current.account_id
   suffix = "${var.app_name}-${var.env_name}"
   source_repository_url = "https://bitbucket.org/${var.source_repository}"
 }
