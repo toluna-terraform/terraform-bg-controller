@@ -27,7 +27,8 @@ resource "aws_iam_role" "merge_waiter" {
         "Service": [
           "codedeploy.amazonaws.com",
           "codepipeline.amazonaws.com",
-          "lambda.amazonaws.com"
+          "lambda.amazonaws.com",
+          "ssm.amazonaws.com"
         ]
       },
       "Effect": "Allow",
