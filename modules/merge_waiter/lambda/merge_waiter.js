@@ -60,7 +60,7 @@ exports.handler = async function (event, context, callback) {
             }
             console.log(`Total deployments:::${total_deployments}`);
             console.log(`Total merge calls:::${merge_call_count_params}`);
-            if (total_deployments == parseInt(merge_call_count_params, 10)) {
+            if (total_deployments <= parseInt(merge_call_count_params, 10)) {
                 setBitBucketStatus();
                 await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, '0', 'String', true);
             }
@@ -130,9 +130,12 @@ async function getRunningDeployments() {
         ]
     };
     try {
-        const { Parameter } = await cd.listDeployments(params).promise();
-        console.log(`DeploymentList:::::${Parameter?.deplyoments}`);
-        return Parameter?.deplyoments ?? null;
+        const deplyoments = await cd.listDeployments(params, function (err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else return data.deployments;     // successful response
+        }).promise();
+        console.log(`DeploymentList:::::${deplyoments.deployments}`);
+        return deplyoments.deployments ?? null;
     } catch (e) {
         console.error(e);
         return null;
@@ -145,15 +148,17 @@ async function getFilteredDeployments(runningDeployments, applicationName) {
         deploymentIds: runningDeployments
     };
     try {
-        const { Parameter } = await cd.batchGetDeployments(params).promise();
+        const deploymentsInfo = await cd.batchGetDeployments(params, function (err, data) {
+            if (err) console.log(err, err.stack); // an error occurred
+            else return data.deploymentsInfo;     // successful response
+        }).promise();
         let count_deployments = 0;
-        Parameter?.deploymentsInfo.forEach(function (deployment) {
+        deploymentsInfo.deploymentsInfo.forEach(function (deployment) {
             if (deployment.applicationName == applicationName) {
                 count_deployments++;
             }
         });
-        total_deployments = count_deployments;
-        console.log(`Found matching deployments:::${count_deployments}`)
+        console.log(`Found matching deployments:::${count_deployments}`);
         return count_deployments;
     } catch (e) {
         console.error(e);
@@ -173,7 +178,7 @@ async function setSSMParam(key, value, type, overwrite) {
         return `${key} was set`;
     }
     catch (e) {
-        console.error(e)
+        console.error(e);
         return `${key} not set`;
     }
 }
@@ -183,13 +188,13 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
         Name: `${key}`,
         WithDecryption: withDecryption
     };
-    console.log(`defaultValue:::::${defaultValue}`)
+    console.log(`defaultValue:::::${defaultValue}`);
     try {
         const { Parameter } = await ssm.getParameter(params).promise();
-        console.log(`Value:::::${Parameter?.Value}`)
-        return Parameter?.Value ?? defaultValue
+        console.log(`Value:::::${Parameter?.Value}`);
+        return Parameter?.Value ?? defaultValue;
     } catch (e) {
-        console.error(e)
-        return defaultValue
+        console.error(e);
+        return defaultValue;
     }
 }
