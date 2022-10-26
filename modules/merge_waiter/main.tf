@@ -15,7 +15,7 @@ resource "aws_lambda_function" "merge_waiter" {
 
 # IAM
 resource "aws_iam_role" "merge_waiter" {
-  name = "${var.app_name}_${var.env_type}-merge-waitermerge_waiter"
+  name = "${var.app_name}_${var.env_type}-merge-waiter"
 
   assume_role_policy = <<POLICY
 {
@@ -39,27 +39,7 @@ resource "aws_iam_role" "merge_waiter" {
 POLICY
 }
 
-resource "aws_iam_role_policy_attachment" "role-lambda-execution" {
+resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
     role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
-}
-
-resource "aws_iam_role_policy_attachment" "role-lambda-ssm" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "role-cloudwatch" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/CloudWatchFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "role-codedeploy" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess"
-}
-
-resource "aws_iam_role_policy_attachment" "role-codepipeline" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AWSCodePipelineFullAccess"
+    policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
