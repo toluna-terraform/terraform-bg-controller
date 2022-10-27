@@ -44,6 +44,12 @@ resource "aws_iam_role" "merge_waiter" {
 POLICY
 }
 
+resource "aws_iam_role_policy" "inline_merge_status_update_policy" {
+  name   = "inline-policy-${var.app_name}-${var.env_type}-merge-waiter"
+  role   = aws_iam_role.merge_waiter.id
+  policy = data.aws_iam_policy_document.inline_merge_status_update_policy_doc.json
+}
+
 resource "aws_iam_role_policy_attachment" "role-lambda-execution" {
     role       = "${aws_iam_role.merge_waiter.name}"
     policy_arn = "arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole"
@@ -64,7 +70,7 @@ resource "aws_iam_role_policy_attachment" "role-codedeploy" {
     policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess"
 }
 
-resource "aws_iam_role_policy_attachment" "attach-sf-access" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
-}
+# resource "aws_iam_role_policy_attachment" "attach-sf-access" {
+#     role       = "${aws_iam_role.merge_waiter.name}"
+#     policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
+# }

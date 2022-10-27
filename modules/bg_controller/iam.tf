@@ -1,6 +1,6 @@
 # ---- iam role for Lambdas
 resource "aws_iam_role" "lambda-role" {
-  name = "lambda-role-${local.app_name}-${local.env_name}"
+  name = "lambda-role-${local.app_name}-${local.env_name}-task-token"
 
   assume_role_policy = <<EOF
 {
@@ -44,15 +44,37 @@ resource "aws_iam_role_policy" "InlinePolicyForLambda" {
                 "logs:CreateLogGroup"
             ],
             "Resource": "*"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "ssm:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Action": [
+                "states:*"
+            ],
+            "Resource": "*"
         }
     ]
 })
 }
 
-# Attach SF access
-resource "aws_iam_policy_attachment" "attach-sf-access" {
-  name       = "attach-sf-access-${local.app_name}-${local.env_name}"
-  roles      = [ aws_iam_role.lambda-role.name ]
-  policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
-}
+# # Attach SF access
+# resource "aws_iam_policy_attachment" "attach-sf-access" {
+#   name       = "attach-sf-access-${local.app_name}-${local.env_name}"
+#   roles      = [ aws_iam_role.lambda-role.name ]
+#   policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
+# }
 
+# # Attach SSM access
+# resource "aws_iam_policy_attachment" "attach-ssm-access" {
+#   name       = "attach-ssm-access-${local.app_name}-${local.env_name}"
+#   roles      = [ aws_iam_role.lambda-role.name ]
+#   policy_arn = "arn:aws:iam::aws:policy/AmazonSSMFullAccess"
+# }
