@@ -12,23 +12,23 @@ resource "aws_s3_bucket_versioning" "codepipeline_bucket" {
     status = "Enabled"
   }
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket
   ]
 }
 
 resource "aws_s3_bucket_public_access_block" "codepipeline_bucket" {
-  bucket = aws_s3_bucket.codepipeline_bucket.id
-  block_public_acls   = true
-  block_public_policy = true
-  ignore_public_acls  = true
+  bucket                  = aws_s3_bucket.codepipeline_bucket.id
+  block_public_acls       = true
+  block_public_policy     = true
+  ignore_public_acls      = true
   restrict_public_buckets = true
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket,aws_s3_bucket_versioning.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket
   ]
 }
 
 data "aws_caller_identity" "current" {
-    
+
 }
 
 provider "aws" {
@@ -37,27 +37,27 @@ provider "aws" {
 }
 
 data "aws_caller_identity" "prod" {
-    provider = aws.prod
+  provider = aws.prod
 }
 
 resource "aws_s3_bucket_policy" "codepipeline_bucket" {
-bucket = aws_s3_bucket.codepipeline_bucket.id
-policy = <<POLICY
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  policy = <<POLICY
 {
-    "Version": "2012-10-17",
-    "Statement": [
-        {
-            "Effect": "Allow",
-            "Principal": {
-                "AWS": "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root"
-            },
-            "Action": "s3:GetObject",
-            "Resource": [ 
-              "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}/*",
-              "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}",
-            ]
-        }
-    ]
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Principal": {
+          "AWS": "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root"
+      },
+      "Action": "s3:*",
+      "Resource":[ 
+        "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}/*",
+        "arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.id}"
+      ]
+    }
+  ]
 }
 POLICY
 }
@@ -67,32 +67,32 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket,aws_s3_bucket_versioning.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket
   ]
 }
 
 module "source_blue_green" {
-  for_each = var.apps
-  source = "./modules/bg_controller"
-  env_name = "${each.key}"
-  app_name = "${var.app_name}"
-  app_type = "${var.app_type}"
-  env_type = "${each.value.env_type}"
-  path_pattern = "${var.path_pattern}"
-  domain = "${var.domain}"
-  aws_profile = "${var.aws_profile}"
-  is_managed_env = "${each.value.is_managed_env}"
-  trigger_branch = "${each.value.pipeline_branch}"
-  pipeline_type = "${each.value.pipeline_type}"
-  source_repository = "${var.source_repository}"
-  bucket_id = aws_s3_bucket.codepipeline_bucket.id
+  for_each          = var.apps
+  source            = "./modules/bg_controller"
+  env_name          = each.key
+  app_name          = var.app_name
+  app_type          = var.app_type
+  env_type          = each.value.env_type
+  path_pattern      = var.path_pattern
+  domain            = var.domain
+  aws_profile       = var.aws_profile
+  is_managed_env    = each.value.is_managed_env
+  trigger_branch    = each.value.pipeline_branch
+  pipeline_type     = each.value.pipeline_type
+  source_repository = var.source_repository
+  bucket_id         = aws_s3_bucket.codepipeline_bucket.id
   depends_on = [
-      aws_s3_bucket.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket
   ]
 }
 
 module "merge_waiter" {
-  source = "./modules/merge_waiter"
-  app_name = "${var.app_name}"
-  env_type = "${var.env_type}"
+  source   = "./modules/merge_waiter"
+  app_name = var.app_name
+  env_type = var.env_type
 }
