@@ -69,32 +69,19 @@ exports.handler = async function (event, context, callback) {
 };
 
 async function setBitBucketStatus() {
-    var bb_user = {
-        Name: '/app/bb_user',
-        WithDecryption: true
-    };
-    var bb_app_pass = {
-        Name: '/app/bb_app_pass',
-        WithDecryption: true
-    };
 
-    var commit = {
-        Name: `/infra/${process.env.APP_NAME}-${environment}/commit_id`,
-        WithDecryption: true
-    };
-
-    const username = await ssm.getParameter(bb_user).promise();
-    const password = await ssm.getParameter(bb_app_pass).promise();
-    const commid_id = await ssm.getParameter(commit).promise();
+    const username = await getSSMParam('/app/bb_user',true);
+    const password = await getSSMParam('/app/bb_app_pass',true);
+    const commid_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`,true);
     const data = JSON.stringify({
         key: `${process.env.APP_NAME} IS READY FOR MERGE`,
         state: "SUCCESSFUL",
         description: "PR IS READY FOR MERGE",
-        url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commid_id["Parameter"]["Value"]}`
+        url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commid_id}`
     });
     console.log(data);
-    const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commid_id["Parameter"]["Value"]}/statuses/build/`);
-    const auth = "Basic " + Buffer.from(username["Parameter"]["Value"] + ":" + password["Parameter"]["Value"]).toString("base64");
+    const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commid_id}/statuses/build/`);
+    const auth = "Basic " + Buffer.from(username + ":" + password).toString("base64");
     const options = {
         hostname: 'api.bitbucket.org',
         port: 443,
@@ -190,10 +177,8 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
         Name: `${key}`,
         WithDecryption: withDecryption
     };
-    console.log(`defaultValue:::::${defaultValue}`);
     try {
         const { Parameter } = await ssm.getParameter(params).promise();
-        console.log(`Value:::::${Parameter?.Value}`);
         return Parameter?.Value ?? defaultValue;
     } catch (e) {
         console.error(e);
