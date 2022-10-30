@@ -32,9 +32,9 @@ exports.handler = async function (event, context, callback) {
             environment = environment.replace("-green", "");
             environment = environment.replace("-blue", "");
             console.log(`::::::::${environment}`);
-            setBitBucketStatus();
-            setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/deployment_id`, `${deploymentId}`, 'String', true);
-            setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/hook_execution_id`, `${hookId}`, 'String', true);
+            await setBitBucketStatus();
+            await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/deployment_id`, `${deploymentId}`, 'String', true);
+            await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/hook_execution_id`, `${hookId}`, 'String', true);
         }
         if (platform === "Lambda") {
             deploymentType = "SAM";
@@ -61,7 +61,7 @@ exports.handler = async function (event, context, callback) {
             console.log(`Total deployments:::${total_deployments}`);
             console.log(`Total merge calls:::${merge_call_count_params}`);
             if (total_deployments <= parseInt(merge_call_count_params, 10)) {
-                setBitBucketStatus();
+                await setBitBucketStatus();
                 await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, '0', 'String', true);
             }
         }
@@ -116,10 +116,12 @@ async function setBitBucketStatus() {
 
     req.on('error', error => {
         console.error(error);
+        return `${error}`
     });
 
     req.write(data);
     req.end();
+    return "Done setting Bitbucket Status"
 }
 
 async function getRunningDeployments() {
