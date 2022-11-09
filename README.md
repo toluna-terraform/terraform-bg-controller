@@ -1,7 +1,8 @@
 Blue Green Controller [Terraform module](https://registry.terraform.io/modules/toluna-terraform/controller/bg/latest)
 
 ### Description
-This module implements the ability to create blue-green deployment of infrastructure
+This module implements the ability to create blue-green deployment of infrastructure. 
+This works for all types of DeploymentTypes (ECS / SAM / AppMesh)
 
 
 The following resources will be created:
@@ -13,6 +14,7 @@ The module requires some pre conditions
 ## Usage
 ```hcl
 module "source_blue_green" {
+  aws_profile = local.aws_profile
   app_name = local.app_name
   apps = local.bg_envs
   domain = local.env_vars.domain
@@ -26,15 +28,15 @@ module "source_blue_green" {
 
 | Name | Version |
 |------|---------|
-| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.0.0 |
-| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 3.59 |
+| <a name="requirement_terraform"></a> [terraform](#requirement\_terraform) | >= 1.1.7 |
+| <a name="requirement_aws"></a> [aws](#requirement\_aws) | >= 4.26 |
 
 
 ## Providers
 
 | Name | Version |
 |------|---------|
-| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 3.59 |
+| <a name="provider_aws"></a> [aws](#provider\_aws) | >= 4.26 |
 | <a name="provider_null"></a> [null](#provider\_null) | >= 3.1.0 |
 
 ## Modules

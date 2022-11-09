@@ -1,3 +1,10 @@
+# prepare lambda zip file
+data "archive_file" "merge_waiter_zip" {
+    type        = "zip"
+    source_file  = "${path.module}/lambda/merge_waiter.js"
+    output_path = "${path.module}/lambda/lambda.zip"
+}
+
 resource "aws_lambda_function" "merge_waiter" {
   filename      = "${path.module}/lambda/lambda.zip"
   function_name = "${var.app_name}-${var.env_type}-merge-waiter"
@@ -15,7 +22,7 @@ resource "aws_lambda_function" "merge_waiter" {
 
 # IAM
 resource "aws_iam_role" "merge_waiter" {
-  name = "${var.app_name}_${var.env_type}-merge-waitermerge_waiter"
+  name = "lambda-role-${var.app_name}-${var.env_type}-merge-waiter"
 
   assume_role_policy = <<POLICY
 {
@@ -35,6 +42,12 @@ resource "aws_iam_role" "merge_waiter" {
   ]
 }
 POLICY
+}
+
+resource "aws_iam_role_policy" "inline_merge_status_update_policy" {
+  name   = "inline-policy-${var.app_name}-${var.env_type}-merge-waiter"
+  role   = aws_iam_role.merge_waiter.id
+  policy = data.aws_iam_policy_document.inline_merge_status_update_policy_doc.json
 }
 
 resource "aws_iam_role_policy_attachment" "role-lambda-execution" {
