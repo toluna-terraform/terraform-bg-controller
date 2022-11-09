@@ -22,7 +22,7 @@ resource "aws_lambda_function" "merge_waiter" {
 
 # IAM
 resource "aws_iam_role" "merge_waiter" {
-  name = "lambda-role-${var.app_name}_${var.env_type}-merge-waiter"
+  name = "lambda-role-${var.app_name}-${var.env_type}-merge-waiter"
 
   assume_role_policy = <<POLICY
 {
@@ -70,7 +70,3 @@ resource "aws_iam_role_policy_attachment" "role-codedeploy" {
     policy_arn = "arn:aws:iam::aws:policy/AWSCodeDeployFullAccess"
 }
 
-# resource "aws_iam_role_policy_attachment" "attach-sf-access" {
-#     role       = "${aws_iam_role.merge_waiter.name}"
-#     policy_arn = "arn:aws:iam::aws:policy/AWSStepFunctionsFullAccess"
-# }
