@@ -1,3 +1,10 @@
+# prepare lambda zip file
+data "archive_file" "merge_waiter_zip" {
+    type        = "zip"
+    source_file  = "${path.module}/lambda/merge_waiter.js"
+    output_path = "${path.module}/lambda/lambda.zip"
+}
+
 resource "aws_lambda_function" "merge_waiter" {
   filename      = "${path.module}/lambda/lambda.zip"
   function_name = "${var.app_name}-${var.env_type}-merge-waiter"

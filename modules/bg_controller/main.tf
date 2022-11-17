@@ -1,7 +1,11 @@
 locals {
-  prefix                = "codebuild"
-  codebuild_name        = "source"
-  suffix                = "${var.app_name}-${var.env_name}"
+  prefix = "codebuild"
+  codebuild_name = "source"
+  app_name = var.app_name
+  env_name = var.env_name
+  env_type = var.env_type
+  aws_account_id = data.aws_caller_identity.current.account_id
+  suffix = "${var.app_name}-${var.env_name}"
   source_repository_url = "https://bitbucket.org/${var.source_repository}"
 }
 
@@ -151,6 +155,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
         domain         = var.domain,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
         aws_profile    = var.aws_profile
+        ttl            = var.ttl
       }) : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl",
       {
         env_name       = var.env_name,

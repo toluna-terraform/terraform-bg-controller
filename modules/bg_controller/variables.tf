@@ -46,3 +46,8 @@ variable "bucket_id" {
 variable "aws_profile" {
   type = string
 }
+
+variable "ttl" {
+  type = number
+  default = 300
+}
