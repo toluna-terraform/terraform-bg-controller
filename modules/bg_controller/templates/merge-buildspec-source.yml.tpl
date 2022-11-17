@@ -58,6 +58,8 @@ phases:
       - |
         # below code applies only if INFRA_CHANGED
         if [ "$INFRA_CHANGED" == "true" ]; then
+          #Waiting for DNS Cache
+          sleep ${ttl}
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
           echo "Shifting traffic"
           cd $CODEBUILD_SRC_DIR/terraform/shared
@@ -65,7 +67,6 @@ phases:
           terraform workspace select shared-${env_type}
           terraform init
           terraform apply -target=module.dns -auto-approve || exit 1
-          #Waiting for DNS Cache
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then
