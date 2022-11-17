@@ -59,7 +59,6 @@ phases:
         # below code applies only if INFRA_CHANGED
         if [ "$INFRA_CHANGED" == "true" ]; then
           #Waiting for DNS Cache
-          sleep ${ttl}
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
           echo "Shifting traffic"
           cd $CODEBUILD_SRC_DIR/terraform/shared
@@ -74,6 +73,7 @@ phases:
           else
             terraform workspace select ${env_name}-$CURRENT_COLOR
           fi
+          sleep ${ttl}
           echo "Destroying old environment"
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
