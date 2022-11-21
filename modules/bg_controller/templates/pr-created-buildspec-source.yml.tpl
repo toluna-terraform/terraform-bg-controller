@@ -7,7 +7,9 @@ env:
     BB_PASS: "/app/bb_app_pass"
     CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
-  
+    SQ_HOST: "/infra/sonarqube/host"
+    SQ_USER: "/infra/sonarqube/username"
+    SQ_PASS: "/infra/sonarqube/password"
 phases:
   pre_build:
     commands:
@@ -72,10 +74,34 @@ phases:
           if [ -d "tests/stress_tests" ]; then
             aws s3 cp tests/stress_tests s3://${app_name}-${env_type}-tests/stress-tests --recursive
           fi
+        fi
+      - |
+        if [[ ${sq_enabled} == "true" ]]; then
+          wget https://binaries.sonarsource.com/Distribution/sonar-scanner-cli/sonar-scanner-cli-${sq_version}-linux.zip
+          unzip sonar-scanner-cli-${sq_version}-linux.zip
+          mkdir /opt/sonar/
+          mv sonar-scanner-cli-${sq_version} /opt/sonar/sonar-scanner
+          export PATH=/opt/sonar/sonar-scanner/bin:$PATH
+          sonar-scanner --version
         fi  
   build:
     on-failure: ABORT
     commands:
+      - |
+        if [[ ${sq_enabled} == "true" ]]; then
+          sonar-scanner -Dsonar.host.url=http://$SQ_HOST:9000/ -Dsonar.projectKey=${app_name} -Dsonar.login=$SQ_USER -Dsonar.password=$SQ_PASS -Dsonar.sources=$CODEBUILD_SRC_DIR/service
+          sleep 5
+          curl https://$SQ_HOST/api/qualitygates/project_status?projectKey=${app_name} >result.json
+          cat result.json
+          COMMIT_ID=$${CODEBUILD_RESOLVED_SOURCE_VERSION:0:7}
+          STATUS_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/commit/$COMMIT_ID/statuses/build/"
+          if [ $(jq -r '.projectStatus.status' result.json) = ERROR ] ; then 
+            curl --request POST --url $STATUS_URL --header "Content-Type:application/json" --data "{\"key\": \"SONARQUBE ${app_name} Validation\", \"state\": \"FAILED\", \"url\": \"https://$SQ_HOST/dashboard?id=${app_name}\"}"
+            $CODEBUILD_BUILD_SUCCEEDING -eq 0 
+          else 
+            curl --request POST --url $STATUS_URL --header "Content-Type:application/json" --data "{\"key\": \"SONARQUBE ${app_name} Validation\", \"state\": \"SUCCESSFUL\", \"url\": \"https://$SQ_HOST/dashboard?id=${app_name}\"}"
+          fi
+        fi
       - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then

@@ -46,3 +46,13 @@ variable "bucket_id" {
 variable "aws_profile" {
   type = string
 }
+
+variable "sq_version" {
+  type = string
+  default = "4.7.0.2747"
+}
+
+variable "sq_enabled" {
+  type = bool
+  default = false
+}

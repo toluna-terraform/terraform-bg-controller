@@ -50,6 +50,7 @@ module "source_blue_green" {
   pipeline_type = "${each.value.pipeline_type}"
   source_repository = "${var.source_repository}"
   bucket_id = aws_s3_bucket.codepipeline_bucket.id
+  sq_enabled = "${each.value.sq_enabled}"
   depends_on = [
       aws_s3_bucket.codepipeline_bucket
   ]
