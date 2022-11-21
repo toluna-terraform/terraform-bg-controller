@@ -2,12 +2,13 @@ const AWS = require('aws-sdk');
 const ssm = new AWS.SSM({ apiVersion: '2014-11-06', region: 'us-east-1' });
 const cd = new AWS.CodeDeploy({ apiVersion: '2014-10-06', region: 'us-east-1' });
 const https = require('https');
-const { StepFunctions } = require("aws-sdk");
+const {StepFunctions} = require( "aws-sdk");
 
 const region = "us-east-1"
 const sf = new StepFunctions({
   region
 });
+
 
 let environment;
 let deploymentType;
