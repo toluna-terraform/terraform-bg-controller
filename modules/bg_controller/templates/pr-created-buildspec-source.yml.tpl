@@ -18,16 +18,15 @@ phases:
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-green/source_artifacts.zip
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-      - |
-        if [[ "${pipeline_type}" != "dev" ]]; then
-          base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-          git diff --name-only origin/$head origin/$base --raw > /tmp/diff_results.txt
-        fi
+      - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
         else
           export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
+        fi
+        if [[ "${pipeline_type}" != "dev" ]]; then
+          curl -L "https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
@@ -35,8 +34,13 @@ phases:
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
-      - export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+      - export CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
       - |
+        if [[ $CURRENT_COLOR == "green" ]] || [[ $CURRENT_COLOR == "blue" ]]; then
+          export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        else
+        export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+        fi
         if [[ "${pipeline_type}" != "dev" ]]; then
         echo "checking for running deployments"
           if [ "$${#inprogress[@]}" -gt 0 ]; then
@@ -56,16 +60,17 @@ phases:
           bb_url=$(echo $base_url | sed 's/https:\/\//https:\/\/'$BB_USER':'$BB_PASS'@/')
           git remote set-url origin $bb_url.git
           git checkout $head
-          git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null && SYNC_NEEDED="false" || SYNC_NEEDED="true"
-          if [[ $SYNC_NEEDED == "true" ]]; then
+          COMMITS_BEHIND=$(git rev-list --left-only --count origin/$base...origin/$head)
+          if [[ $COMMITS_BEHIND -gt 0 ]]; then
+            echo "The PR is $COMMITS_BEHIND commints behind,Codebuild will now stop and restart from synced branch."
+            git merge origin/$base -m "Auto Sync done by AWS codebuild."| grep "Already up to date." &> /dev/null || echo "true"
             git push --set-upstream origin $head
-            echo "Codebuild will now stop and restart from synced branch."
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
         fi
       - |
-        tests_changed=$(grep tests/ "/tmp/diff_results.txt")
-        if [[ ! -z $tests_changed ]]; then
+        tests_changed=$(grep -q "tests/" /tmp/diff_results.txt >/dev/null;echo $?)
+        if [[ "$tests_changed" -eq 0 ]]; then
           if [ -d "tests/postman" ]; then
             aws s3 cp tests/postman s3://${app_name}-${env_type}-tests/integration_tests --recursive
           fi
@@ -79,20 +84,21 @@ phases:
       - artifact_prefix="${env_name}"
       - |
         if [[ "${is_managed_env}" == "true" ]]; then
-          tf_changed=$(grep terraform/app "/tmp/diff_results.txt")
-          if [[ -z $tf_changed ]]; then
+          echo "the following files changed for PR: $${PR_NUMBER}"
+          cat /tmp/diff_results.txt
+          tf_change_status=$(grep -q "terraform/app" /tmp/diff_results.txt >/dev/null;echo $?)
+          if [[ "$tf_change_status" -eq 1 ]]; then
             TF_CHANGED="false"
           else 
             TF_CHANGED="true"
           fi
-          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green; TF_CHANGED="true"
+          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green
           NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
           artifact_prefix="${env_name}-$NEXT_COLOR"
-          echo "did tf have changes $TF_CHANGED"
-          if [[ "${is_managed_env}" == "true" && "$TF_CHANGED" == "true" ]]; then
+          echo "did tf have changes $${TF_CHANGED}"
+          if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
              cd terraform/app
             terraform init
-            CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
             if [[ $CURRENT_COLOR == "green" ]]; then
               COMMENT_URL="https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
               curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-blue is done.\"}}"
@@ -124,8 +130,8 @@ phases:
     on-failure: ABORT
     commands:
       - |
-        src_changed=$(grep -v -E 'terraform|tests' "/tmp/diff_results.txt")
-        if [[ -z $src_changed ]] && [[ "${pipeline_type}" != "dev" ]]; then
+        src_changed=$(grep -v -E 'terraform|tests' /tmp/diff_results.txt >/dev/null;echo $?)
+        if [[ "$src_changed" -eq 1 ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
         else 
           echo "true" > src_changed.txt
