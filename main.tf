@@ -49,7 +49,10 @@ resource "aws_s3_bucket_policy" "codepipeline_bucket" {
     {
       "Effect": "Allow",
       "Principal": {
-          "AWS": "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root"
+          "AWS": [
+            "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root",
+            "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+          ]
       },
       "Action": "s3:*",
       "Resource":[ 
