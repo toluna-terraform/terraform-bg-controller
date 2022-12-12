@@ -5,7 +5,7 @@ env:
   parameter-store:
     BB_USER: "/app/bb_user"  
     BB_PASS: "/app/bb_app_pass"
-    CONSUL_PROJECT_ID: "/infra/${app_name}-${env_type}/consul_project_id"
+    CONSUL_URL: "/infra/consul_url"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
   
 phases:
@@ -29,7 +29,7 @@ phases:
           curl -L "https://$BB_USER:$BB_PASS@api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
-      - export CONSUL_HTTP_ADDR=https://consul-cluster-test.consul.$CONSUL_PROJECT_ID.aws.hashicorp.cloud
+      - export CONSUL_HTTP_ADDR=https://$CONSUL_URL
       - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
