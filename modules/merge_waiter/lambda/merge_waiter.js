@@ -49,8 +49,8 @@ exports.handler = async function (event, context, callback) {
       environment = environment.replace("-blue", "");
       console.log(`::::::::${environment}`);
       await setBitBucketStatus();
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/deployment_id`, `${deploymentId}`, 'String', true);
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/hook_execution_id`, `${hookId}`, 'String', true);
+      await setSSMParam(`/infra/${environment}/deployment_id`, `${deploymentId}`, 'String', true);
+      await setSSMParam(`/infra/${environment}/hook_execution_id`, `${hookId}`, 'String', true);
     }
     if (platform === "Lambda") {
       deploymentType = "SAM";
