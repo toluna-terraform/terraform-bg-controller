@@ -102,7 +102,7 @@ async function setBitBucketStatus() {
 
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
-  const commid_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
+  const commid_id = await getSSMParam(`/infra/${environment}/commit_id`, true);
   const data = JSON.stringify({
     key: `${process.env.APP_NAME} IS READY FOR MERGE`,
     state: "SUCCESSFUL",
