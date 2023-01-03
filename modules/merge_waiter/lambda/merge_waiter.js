@@ -44,7 +44,8 @@ exports.handler = async function (event, context, callback) {
       platform = deploy_details.deploymentInfo.computePlatform;
     }
     if (platform === "ECS") {
-      environment = deploy_details.deploymentInfo.applicationName.replace("ecs-deploy-", "");
+      environment = deploy_details.deploymentInfo.applicationName.replace(`ecs-deploy-`, "");
+      environment = environment.replace(`${process.env.APP_NAME}-`, "");
       environment = environment.replace("-green", "");
       environment = environment.replace("-blue", "");
       console.log(`::::::::${environment}`);
