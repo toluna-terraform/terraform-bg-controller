@@ -56,6 +56,7 @@ exports.handler = async function (event, context, callback) {
     if (platform === "Lambda") {
       deploymentType = "SAM";
       environment = deploy_details.deploymentInfo.applicationName.replace(`serverlessrepo-${process.env.APP_NAME}-`,'');
+      environment = environment.replace(`lambda-deploy-${process.env.APP_NAME}-`,'');
       environment = environment.split('-')[0];
       let merge_call_count_params = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, true, '0');
       merge_count = parseInt(merge_call_count_params, 10);
