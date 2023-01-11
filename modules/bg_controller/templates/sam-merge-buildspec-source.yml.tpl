@@ -29,10 +29,6 @@ phases:
           DEPLOYMENT_ID=$(_jq '.DeploymentId')
           HOOK_EXECUTION_ID=$(_jq '.HookId')
           aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
-          DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
-          if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
-            aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
-          fi
         done
   build:
     on-failure: ABORT
@@ -71,6 +67,7 @@ phases:
           else
             terraform workspace select ${env_name}-$CURRENT_COLOR
           fi
+          sleep ${ttl}
           echo "Destroying old environment"
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init

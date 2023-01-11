@@ -165,6 +165,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
         domain         = var.domain,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
         aws_profile    = var.aws_profile
+        ttl            = var.ttl
       }) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl",
       {
         env_name       = var.env_name,
