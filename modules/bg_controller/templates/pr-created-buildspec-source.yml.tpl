@@ -19,7 +19,7 @@ phases:
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-      - aws ssm put-parameter --name /infra/${app_name}-${env_type}/merge_details --value  '[]' --type String --overwrite
+      - aws ssm put-parameter --name /infra/${app_name}-${env_name}/merge_details --value  '[]' --type String --overwrite
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
