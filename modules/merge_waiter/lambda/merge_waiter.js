@@ -58,13 +58,13 @@ exports.handler = async function (event, context, callback) {
       environment = deploy_details.deploymentInfo.applicationName.replace(`serverlessrepo-${process.env.APP_NAME}-`,'');
       environment = environment.replace(`lambda-deploy-${process.env.APP_NAME}-`,'');
       environment = environment.split('-')[0];
+      let runningDeployments = await getRunningDeployments();
+      total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
       let merge_call_count_params = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, true, '0');
       merge_count = parseInt(merge_call_count_params, 10);
       merge_count++;
       await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, merge_count, 'String', true);
       merge_call_count_params = merge_count;
-      let runningDeployments = await getRunningDeployments();
-      total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
       let merge_details = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_details`, true, '[]');
       if (merge_details == '[]') {
         merge_details = `[{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}]`;
