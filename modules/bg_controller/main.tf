@@ -52,28 +52,6 @@ resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
   }
 }
 
-resource "aws_codebuild_webhook" "merge_dev_flow_hook_webhook" {
-  count        = var.pipeline_type == "dev" && var.app_type == "sam" ? 1 : 0
-  project_name = aws_codebuild_project.merge_codebuild[count.index].name
-  build_type   = "BUILD"
-  filter_group {
-    filter {
-      type    = "EVENT"
-      pattern = "PUSH"
-    }
-
-    filter {
-      type    = "HEAD_REF"
-      pattern = var.trigger_branch
-    }
-
-    filter {
-      type    = "FILE_PATH"
-      pattern = var.path_pattern
-    }
-  }
-}
-
 resource "aws_codebuild_project" "pr_codebuild" {
   name          = var.pipeline_type == "dev" ? "${local.prefix}-${local.codebuild_name}-push-${local.suffix}" : "${local.prefix}-${local.codebuild_name}-pr-${local.suffix}"
   description   = "Pull source files from Git repo"
