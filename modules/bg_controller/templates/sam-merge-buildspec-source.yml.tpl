@@ -67,6 +67,7 @@ phases:
           else
             terraform workspace select ${env_name}-$CURRENT_COLOR
           fi
+          sleep ${ttl}
           echo "Destroying old environment"
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
