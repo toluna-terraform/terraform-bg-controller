@@ -67,6 +67,7 @@ phases:
           else
             terraform workspace select ${env_name}-$CURRENT_COLOR
           fi
+          echo "Waiting ${ttl} seconds for DNS Cache to refresh"
           sleep ${ttl}
           echo "Destroying old environment"
           cd $CODEBUILD_SRC_DIR/terraform/app
