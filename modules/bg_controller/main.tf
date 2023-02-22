@@ -156,7 +156,17 @@ resource "aws_codebuild_project" "merge_codebuild" {
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
         aws_profile    = var.aws_profile
         ttl            = var.ttl
-      }) : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl",
+      }) : var.app_type == "appmesh" ? templatefile("${path.module}/templates/merge-buildspec-source.yml.tpl",
+      {
+        env_name       = var.env_name,
+        env_type       = var.env_type,
+        app_name       = var.app_name,
+        app_type       = var.app_type,
+        domain         = var.domain,
+        hosted_zone_id = data.aws_route53_zone.public.zone_id,
+        aws_profile    = var.aws_profile
+        ttl            = var.ttl
+      })  : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl",
       {
         env_name       = var.env_name,
         env_type       = var.env_type,
