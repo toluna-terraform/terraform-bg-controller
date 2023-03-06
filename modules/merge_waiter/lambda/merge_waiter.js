@@ -79,7 +79,7 @@ exports.handler = async function (event, context, callback) {
       }
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
-      if (total_deployments <= parseInt(merge_call_count_params, 10)) {
+      if (total_deployments == parseInt(merge_call_count_params, 10)) {
         await setBitBucketStatus();
         await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, '0', 'String', true);
       }
