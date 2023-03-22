@@ -55,16 +55,10 @@ resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
 resource "aws_dynamodb_table" "merge_waiter" {
   name     = "MergeWaiter-${var.app_name}-${var.env_type}"
   hash_key         = "APPLICATION"
-  read_capacity = 1
-  write_capacity = 1
+  billing_mode = "PAY_PER_REQUEST"
   attribute {
     name = "APPLICATION"
     type = "S"
-  }
-  lifecycle {
-    ignore_changes = [
-      read_capacity,write_capacity
-    ]
   }
 }
 
