@@ -97,15 +97,15 @@ async function setBitBucketStatus() {
 
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
-  const commid_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
+  const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
   const data = JSON.stringify({
     key: `${process.env.APP_NAME} IS READY FOR MERGE`,
     state: "SUCCESSFUL",
     description: "PR IS READY FOR MERGE",
-    url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commid_id}`
+    url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commit_id}`
   });
   console.log(data);
-  const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commid_id}/statuses/build/`);
+  const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commit_id}/statuses/build/`);
   const auth = "Basic " + Buffer.from(username + ":" + password).toString("base64");
   const options = {
     hostname: 'api.bitbucket.org',
