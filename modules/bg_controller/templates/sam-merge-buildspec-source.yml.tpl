@@ -21,7 +21,7 @@ phases:
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - |
         ### Finishing Deployment/s #####
-        DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
+        DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
         for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
           _jq() {
             echo $${row} | base64 --decode | jq -r $${1}
@@ -30,7 +30,7 @@ phases:
           HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
           aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
         done
-        aws dynamodb delete-item --table-name MergeWaiter-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
+        aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
   build:
     on-failure: ABORT
     commands:
