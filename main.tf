@@ -74,11 +74,6 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   ]
 }
 
-resource "aws_dynamodb_table" "example" {
-  name     = "MergWaiter-${var.env_type}"
-  hash_key         = "APPLICATION"
-}
-
 module "source_blue_green" {
   for_each          = var.apps
   source            = "./modules/bg_controller"
