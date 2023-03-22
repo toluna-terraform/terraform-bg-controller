@@ -1,6 +1,7 @@
 const AWS = require('aws-sdk');
 const ssm = new AWS.SSM({ apiVersion: '2014-11-06', region: 'us-east-1' });
 const cd = new AWS.CodeDeploy({ apiVersion: '2014-10-06', region: 'us-east-1' });
+const dynamodb = new AWS.DynamoDB.DocumentClient();
 const https = require('https');
 const {StepFunctions} = require( "aws-sdk");
 
@@ -50,8 +51,8 @@ exports.handler = async function (event, context, callback) {
       environment = environment.replace("-blue", "");
       console.log(`::::::::${environment}`);
       await setBitBucketStatus();
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/deployment_id`, `${deploymentId}`, 'String', true);
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/hook_execution_id`, `${hookId}`, 'String', true);
+      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
     }
     if (platform === "Lambda") {
       deploymentType = "SAM";
@@ -60,34 +61,26 @@ exports.handler = async function (event, context, callback) {
       environment = environment.split('-')[0];
       let runningDeployments = await getRunningDeployments();
       total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
-      let merge_call_count_params = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, true, '0');
-      merge_count = parseInt(merge_call_count_params, 10);
-      merge_count++;
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, merge_count, 'String', true);
-      merge_call_count_params = merge_count;
-      let merge_details = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_details`, true, '[]');
-      if (merge_details == '[]') {
-        merge_details = `[{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}]`;
-        await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_details`, merge_details, 'String', true);
-      } else {
-        let current_value = merge_details;
-        let current_json = JSON.parse(current_value);
-        let new_value = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-        current_json.push(new_value);
-        let new_merge_details = JSON.stringify(current_json);
-        await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_details`, new_merge_details, 'String', true);
+      let deploy_details_status = await getDeployDetails(`${process.env.APP_NAME}-${environment}`);
+      try {
+      merge_count = deploy_details_status?.Item.Details.length
+      } catch {
+        merge_count = 0;
       }
+      merge_count++;
+      let merge_call_count_params = merge_count;
+      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
-      if (total_deployments == parseInt(merge_call_count_params, 10)) {
+      if (total_deployments >= parseInt(merge_call_count_params, 10)) {
         await setBitBucketStatus();
-        await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/merge_call_count_params`, '0', 'String', true);
       }
     }
     if (platform === "AppMesh") {
       taskToken1 = event.taskToken;
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/hook_execution_id`, hookId, 'String', true);
-      await setSSMParam(`/infra/${process.env.APP_NAME}-${environment}/deployment_id`, deploymentId, 'String', true);
+      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
       await setBitBucketStatus();
       console.log("taskToken = " + taskToken1);
       let params = {
@@ -187,20 +180,43 @@ async function getFilteredDeployments(runningDeployments, applicationName) {
   }
 }
 
-async function setSSMParam(key, value, type, overwrite) {
-  var params = {
-    Name: `${key}`,
-    Value: `${value}`,
-    Overwrite: overwrite,
-    Type: `${type}`
+async function setDeployDetails(applicationName,details){
+  var db_params = {
+    TableName: `MergeWaiter-${process.env.APP_NAME}-${process.env.ENV_TYPE}`,
+    Key: { "APPLICATION": `${applicationName}` },
+    UpdateExpression: "SET Details = list_append(if_not_exists(Details, :empty_list), :vals)",
+    ExpressionAttributeValues: {
+    ':vals': [{
+      "DeploymentId": `${details.DeploymentId}`,
+      "LifecycleEventHookExecutionId": `${details.HookId}`,
+    }],
+    ":empty_list": []
+  }
   };
   try {
-    const { Parameter } = await ssm.putParameter(params).promise();
-    return `${key} was set`;
+    const { Parameter } = await dynamodb.update(db_params).promise();
+    return `${details} where set`;
   }
   catch (e) {
     console.error(e);
-    return `${key} not set`;
+    return `${details} not set`;
+  }
+}
+
+async function getDeployDetails(applicationName, defaultValue = null){
+  var db_params = {
+    Key: {
+     "APPLICATION": `${applicationName}`
+     }, 
+    ReturnConsumedCapacity: "TOTAL", 
+    TableName: `MergeWaiter-${process.env.APP_NAME}-${process.env.ENV_TYPE}`
+   };
+   try {
+    const Parameter = await dynamodb.get(db_params).promise();
+    return Parameter //JSON.parse({"Details":`${Parameter?.Item.Details}`,"Count": `${Parameter?.Item.Details.length}`});
+  }
+  catch (e) {
+    return null;
   }
 }
 
