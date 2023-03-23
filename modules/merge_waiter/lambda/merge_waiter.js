@@ -73,7 +73,7 @@ exports.handler = async function (event, context, callback) {
       await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
-      if (total_deployments >= parseInt(merge_call_count_params, 10)) {
+      if (total_deployments <= parseInt(merge_call_count_params, 10)) {
         await setBitBucketStatus();
       }
     }
