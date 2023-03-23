@@ -3,7 +3,7 @@ const ssm = new AWS.SSM({ apiVersion: '2014-11-06', region: 'us-east-1' });
 const cd = new AWS.CodeDeploy({ apiVersion: '2014-10-06', region: 'us-east-1' });
 const dynamodb = new AWS.DynamoDB.DocumentClient();
 const https = require('https');
-const {StepFunctions} = require( "aws-sdk");
+const { StepFunctions } = require("aws-sdk");
 
 const region = "us-east-1"
 const sf = new StepFunctions({
@@ -22,8 +22,8 @@ let platform;
 
 exports.handler = async function (event, context, callback) {
   console.log('event', event);
-   const username =  await getSSMParam('/app/bb_user', true);
-   const password =  await getSSMParam('/app/bb_app_pass', true);
+  const username = await getSSMParam('/app/bb_user', true);
+  const password = await getSSMParam('/app/bb_app_pass', true);
   if (event.DeploymentId) {
     deploymentId = event.DeploymentId;
     hookId = event.LifecycleEventHookExecutionId;
@@ -53,40 +53,40 @@ exports.handler = async function (event, context, callback) {
       environment = environment.replace("-blue", "");
       console.log(`::::::::${environment}`);
       const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
-      await setBitBucketStatus(username,password,commit_id);
+      await setBitBucketStatus(username, password, commit_id);
       let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
     }
     if (platform === "Lambda") {
       deploymentType = "SAM";
-      environment = deploy_details.deploymentInfo.applicationName.replace(`serverlessrepo-${process.env.APP_NAME}-`,'');
-      environment = environment.replace(`lambda-deploy-${process.env.APP_NAME}-`,'');
+      environment = deploy_details.deploymentInfo.applicationName.replace(`serverlessrepo-${process.env.APP_NAME}-`, '');
+      environment = environment.replace(`lambda-deploy-${process.env.APP_NAME}-`, '');
       environment = environment.split('-')[0];
       let runningDeployments = await getRunningDeployments();
       total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
       let deploy_details_status = await getDeployDetails(`${process.env.APP_NAME}-${environment}`);
       try {
-      merge_count = deploy_details_status?.Item.Details.length
+        merge_count = deploy_details_status?.Item.Details.length
       } catch {
         merge_count = 0;
       }
       merge_count++;
       let merge_call_count_params = merge_count;
       let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
       if (total_deployments <= parseInt(merge_call_count_params, 10)) {
         const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
-        await setBitBucketStatus(username,password,commit_id);
+        await setBitBucketStatus(username, password, commit_id);
       }
     }
     if (platform === "AppMesh") {
       taskToken1 = event.taskToken;
       let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-      await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
       const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
-      await setBitBucketStatus(username,password,commit_id);
+      await setBitBucketStatus(username, password, commit_id);
       console.log("taskToken = " + taskToken1);
       let params = {
         taskToken: taskToken1,
@@ -98,8 +98,8 @@ exports.handler = async function (event, context, callback) {
   }
 };
 
-function setBitBucketStatus(username,password,commit_id) {
-return new Promise((resolve, reject) => {
+function setBitBucketStatus(username, password, commit_id) {
+  return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       key: `${process.env.APP_NAME} IS READY FOR MERGE`,
       state: "SUCCESSFUL",
@@ -120,7 +120,7 @@ return new Promise((resolve, reject) => {
         'Authorization': auth
       },
     };
-  
+
     const req = https.request(options, res => {
       console.log(`statusCode: ${res.statusCode}`);
       res.on('data', d => {
@@ -130,15 +130,15 @@ return new Promise((resolve, reject) => {
         resolve(d);
       });
     });
-  
+
     req.on('error', error => {
       console.error(error);
       reject(`${error}`)
     });
-  
+
     req.write(data);
     req.end();
-});
+  });
 }
 
 async function getRunningDeployments() {
@@ -185,18 +185,18 @@ async function getFilteredDeployments(runningDeployments, applicationName) {
   }
 }
 
-async function setDeployDetails(applicationName,details){
+async function setDeployDetails(applicationName, details) {
   var db_params = {
     TableName: `MergeWaiter-${process.env.APP_NAME}-${process.env.ENV_TYPE}`,
     Key: { "APPLICATION": `${applicationName}` },
     UpdateExpression: "SET Details = list_append(if_not_exists(Details, :empty_list), :vals)",
     ExpressionAttributeValues: {
-    ':vals': [{
-      "DeploymentId": `${details.DeploymentId}`,
-      "LifecycleEventHookExecutionId": `${details.HookId}`,
-    }],
-    ":empty_list": []
-  }
+      ':vals': [{
+        "DeploymentId": `${details.DeploymentId}`,
+        "LifecycleEventHookExecutionId": `${details.HookId}`,
+      }],
+      ":empty_list": []
+    }
   };
   try {
     const { Parameter } = await dynamodb.update(db_params).promise();
@@ -208,15 +208,15 @@ async function setDeployDetails(applicationName,details){
   }
 }
 
-async function getDeployDetails(applicationName, defaultValue = null){
+async function getDeployDetails(applicationName, defaultValue = null) {
   var db_params = {
     Key: {
-     "APPLICATION": `${applicationName}`
-     }, 
-    ReturnConsumedCapacity: "TOTAL", 
+      "APPLICATION": `${applicationName}`
+    },
+    ReturnConsumedCapacity: "TOTAL",
     TableName: `MergeWaiter-${process.env.APP_NAME}-${process.env.ENV_TYPE}`
-   };
-   try {
+  };
+  try {
     const Parameter = await dynamodb.get(db_params).promise();
     return Parameter //JSON.parse({"Details":`${Parameter?.Item.Details}`,"Count": `${Parameter?.Item.Details.length}`});
   }
