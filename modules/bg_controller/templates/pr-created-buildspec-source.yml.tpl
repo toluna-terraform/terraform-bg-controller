@@ -131,6 +131,9 @@ phases:
     on-failure: ABORT
     commands:
       - |
+        echo "Cleaning up .terraform folders to reduce Artifact size"
+        rm -rf terraform/*/.terraform
+      - |
         src_changed=$(grep -v -E 'terraform|tests' /tmp/diff_results.txt >/dev/null;echo $?)
         if [[ "$src_changed" -eq 1 ]] && [[ "${pipeline_type}" != "dev" ]]; then
           echo "false" > src_changed.txt
@@ -154,9 +157,5 @@ phases:
 artifacts:
   files:
     - '**/*'
-  exclude-paths:
-    - '**/terraform/app/.terraform/'
-    - '**/terraform/data/.terraform/'
-    - '**/terraform/shared/.terraform/'
   discard-paths: no
   name: $artifact_prefix/source_artifacts.zip
