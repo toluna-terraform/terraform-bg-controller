@@ -22,6 +22,8 @@ let platform;
 
 exports.handler = async function (event, context, callback) {
   console.log('event', event);
+   const username =  await getSSMParam('/app/bb_user', true);
+   const password =  await getSSMParam('/app/bb_app_pass', true);
   if (event.DeploymentId) {
     deploymentId = event.DeploymentId;
     hookId = event.LifecycleEventHookExecutionId;
@@ -50,7 +52,8 @@ exports.handler = async function (event, context, callback) {
       environment = environment.replace("-green", "");
       environment = environment.replace("-blue", "");
       console.log(`::::::::${environment}`);
-      await setBitBucketStatus();
+      const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
+      await setBitBucketStatus(username,password,commit_id);
       let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
       await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
     }
@@ -74,14 +77,16 @@ exports.handler = async function (event, context, callback) {
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
       if (total_deployments <= parseInt(merge_call_count_params, 10)) {
-        await setBitBucketStatus();
+        const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
+        await setBitBucketStatus(username,password,commit_id);
       }
     }
     if (platform === "AppMesh") {
       taskToken1 = event.taskToken;
       let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
       await setDeployDetails(`${process.env.APP_NAME}-${environment}`,merge_details);
-      await setBitBucketStatus();
+      const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
+      await setBitBucketStatus(username,password,commit_id);
       console.log("taskToken = " + taskToken1);
       let params = {
         taskToken: taskToken1,
@@ -93,47 +98,47 @@ exports.handler = async function (event, context, callback) {
   }
 };
 
-async function setBitBucketStatus() {
-
-  const username = await getSSMParam('/app/bb_user', true);
-  const password = await getSSMParam('/app/bb_app_pass', true);
-  const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
-  const data = JSON.stringify({
-    key: `${process.env.APP_NAME} IS READY FOR MERGE`,
-    state: "SUCCESSFUL",
-    description: "PR IS READY FOR MERGE",
-    url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commit_id}`
-  });
-  console.log(data);
-  const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commit_id}/statuses/build/`);
-  const auth = "Basic " + Buffer.from(username + ":" + password).toString("base64");
-  const options = {
-    hostname: 'api.bitbucket.org',
-    port: 443,
-    path: uri,
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Content-Length': data.length,
-      'Authorization': auth
-    },
-  };
-
-  const req = https.request(options, res => {
-    console.log(`statusCode: ${res.statusCode}`);
-    res.on('data', d => {
-      process.stdout.write(d);
+function setBitBucketStatus(username,password,commit_id) {
+return new Promise((resolve, reject) => {
+    const data = JSON.stringify({
+      key: `${process.env.APP_NAME} IS READY FOR MERGE`,
+      state: "SUCCESSFUL",
+      description: "PR IS READY FOR MERGE",
+      url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commit_id}`
     });
-  });
-
-  req.on('error', error => {
-    console.error(error);
-    return `${error}`
-  });
-
-  req.write(data);
-  req.end();
-  return "Done setting Bitbucket Status"
+    console.log(data);
+    const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commit_id}/statuses/build/`);
+    const auth = "Basic " + Buffer.from(username + ":" + password).toString("base64");
+    const options = {
+      hostname: 'api.bitbucket.org',
+      port: 443,
+      path: uri,
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length,
+        'Authorization': auth
+      },
+    };
+  
+    const req = https.request(options, res => {
+      console.log(`statusCode: ${res.statusCode}`);
+      res.on('data', d => {
+        process.stdout.write(d);
+      });
+      res.on('end', d => {
+        resolve(d);
+      });
+    });
+  
+    req.on('error', error => {
+      console.error(error);
+      reject(`${error}`)
+    });
+  
+    req.write(data);
+    req.end();
+});
 }
 
 async function getRunningDeployments() {
