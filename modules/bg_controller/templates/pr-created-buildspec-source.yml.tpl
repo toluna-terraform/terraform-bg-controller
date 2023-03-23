@@ -154,6 +154,9 @@ phases:
 artifacts:
   files:
     - '**/*'
-  exclude-paths: '**/.terraform/*'
+  exclude-paths:
+    - '**/terraform/app/.terraform/'
+    - '**/terraform/data/.terraform/'
+    - '**/terraform/shared/.terraform/'
   discard-paths: no
   name: $artifact_prefix/source_artifacts.zip
