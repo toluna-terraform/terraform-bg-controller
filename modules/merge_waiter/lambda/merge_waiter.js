@@ -221,6 +221,7 @@ async function getDeployDetails(applicationName, defaultValue = null) {
     return Parameter //JSON.parse({"Details":`${Parameter?.Item.Details}`,"Count": `${Parameter?.Item.Details.length}`});
   }
   catch (e) {
+    console.error(e);
     return null;
   }
 }

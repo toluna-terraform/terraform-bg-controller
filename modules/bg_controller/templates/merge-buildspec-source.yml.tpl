@@ -21,6 +21,7 @@ phases:
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - |
+        #### Retrieve deployment details from DynmoDB table and terminate deployments ###
         if [ "$DEPLOYMENT_TYPE" != "AppMesh" ]; then
           DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
           for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
