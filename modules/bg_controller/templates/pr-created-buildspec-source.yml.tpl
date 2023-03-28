@@ -19,7 +19,7 @@ phases:
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
       - head=$(echo $CODEBUILD_WEBHOOK_HEAD_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
       - base=$(echo $CODEBUILD_WEBHOOK_BASE_REF | sed 's/origin\///' | sed 's/refs\///' | sed 's/heads\///')
-      - aws ssm put-parameter --name /infra/${app_name}-${env_name}/merge_details --value  '[]' --type String --overwrite
+      - aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' || echo "not found"
       - |
         if [[ "${pipeline_type}" != "dev" ]]; then
           export PR_NUMBER="$(echo $CODEBUILD_WEBHOOK_TRIGGER | cut -d'/' -f2)"
@@ -78,7 +78,7 @@ phases:
           if [ -d "tests/stress_tests" ]; then
             aws s3 cp tests/stress_tests s3://${app_name}-${env_type}-tests/stress-tests --recursive
           fi
-        fi  
+        fi
   build:
     on-failure: ABORT
     commands:
@@ -130,6 +130,9 @@ phases:
   post_build:
     on-failure: ABORT
     commands:
+      - |
+        echo "Cleaning up .terraform folders to reduce Artifact size"
+        rm -rf terraform/*/.terraform
       - |
         src_changed=$(grep -v -E 'terraform|tests' /tmp/diff_results.txt >/dev/null;echo $?)
         if [[ "$src_changed" -eq 1 ]] && [[ "${pipeline_type}" != "dev" ]]; then

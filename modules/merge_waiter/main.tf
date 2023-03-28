@@ -16,6 +16,7 @@ resource "aws_lambda_function" "merge_waiter" {
   environment {
     variables = {
       APP_NAME = var.app_name
+      ENV_TYPE = var.env_type
     }
   }
 }
@@ -50,3 +51,14 @@ resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
     role       = "${aws_iam_role.merge_waiter.name}"
     policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+
+resource "aws_dynamodb_table" "merge_waiter" {
+  name     = "MergeWaiter-${var.app_name}-${var.env_type}"
+  hash_key         = "APPLICATION"
+  billing_mode = "PAY_PER_REQUEST"
+  attribute {
+    name = "APPLICATION"
+    type = "S"
+  }
+}
+
