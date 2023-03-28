@@ -65,10 +65,10 @@ exports.handler = async function (event, context, callback) {
       let runningDeployments = await getRunningDeployments();
       total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
       let deploy_details_status = await getDeployDetails(`${process.env.APP_NAME}-${environment}`);
-      try {
-        merge_count = deploy_details_status?.Item.Details.length
-      } catch {
+      if (deploy_details_status?.Item?.Details == null) {
         merge_count = 0;
+      } else {
+        merge_count = deploy_details_status.Item.Details.length
       }
       merge_count++;
       let merge_call_count_params = merge_count;
