@@ -64,16 +64,15 @@ exports.handler = async function (event, context, callback) {
       environment = environment.split('-')[0];
       let runningDeployments = await getRunningDeployments();
       total_deployments = await getFilteredDeployments(runningDeployments, deploy_details.deploymentInfo.applicationName);
+      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
+      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
       let deploy_details_status = await getDeployDetails(`${process.env.APP_NAME}-${environment}`);
       if (deploy_details_status?.Item?.Details == null) {
         merge_count = 0;
       } else {
         merge_count = deploy_details_status.Item.Details.length
       }
-      merge_count++;
       let merge_call_count_params = merge_count;
-      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
       console.log(`Total deployments:::${total_deployments}`);
       console.log(`Total merge calls:::${merge_call_count_params}`);
       if (total_deployments <= parseInt(merge_call_count_params, 10)) {
