@@ -76,6 +76,7 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
 
 module "source_blue_green" {
   for_each          = var.apps
+
   source            = "./modules/bg_controller"
   env_name          = each.key
   app_name          = var.app_name
@@ -85,7 +86,8 @@ module "source_blue_green" {
   domain            = var.domain
   aws_profile       = var.aws_profile
   ttl               = var.ttl
-  is_managed_env    = each.value.is_managed_env
+  # is_managed_env is derived from pipeline_type
+  is_managed_env    = (each.value.pipeline_type == "dev") ? false : true 
   trigger_branch    = each.value.pipeline_branch
   pipeline_type     = each.value.pipeline_type
   source_repository = var.source_repository
