@@ -6,13 +6,18 @@ data "archive_file" "merge_waiter_zip" {
 }
 
 resource "aws_lambda_function" "merge_waiter" {
-  filename      = "${path.module}/lambda/lambda.zip"
-  function_name = "${var.app_name}-${var.env_type}-merge-waiter"
-  role          = aws_iam_role.merge_waiter.arn
-  handler       = "merge_waiter.handler"
-  runtime       = "nodejs14.x"
-  timeout       = 180
+  filename      				 = "${path.module}/lambda/lambda.zip"
+  function_name 				 = "${var.app_name}-${var.env_type}-merge-waiter"
+  role          				 = aws_iam_role.merge_waiter.arn
+  handler       				 = "merge_waiter.handler"
+  runtime       				 = "nodejs14.x"
+  timeout       				 = 180
+  reserved_concurrent_executions = 100
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
+  kms_key_arn 	   = "ckv_km"
+  tracing_config {
+    mode = "Active"
+  }
   environment {
     variables = {
       APP_NAME = var.app_name

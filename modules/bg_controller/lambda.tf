@@ -27,4 +27,10 @@ resource "aws_lambda_function" "appmesh_sf_task_token" {
   }
 
   timeout = 60
+    
+  kms_key_arn = "ckv_km"
+  
+  tracing_config {
+    mode = "Active"
+  }
 }

@@ -70,9 +70,17 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"
   depends_on = [
-    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket, aws_s3_bucket_ownership_controls.source_codebuild_bucket_acl_ownership
   ]
 }
+
+resource "aws_s3_bucket_ownership_controls" "source_codebuild_bucket_acl_ownership" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  rule {
+    object_ownership = "ObjectWriter"
+  }
+}
+
 
 module "source_blue_green" {
   for_each          = var.apps
