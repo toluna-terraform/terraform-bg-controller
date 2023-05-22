@@ -7,8 +7,7 @@ env:
     PASS: "/app/bb_app_pass"
     CONSUL_URL: "/infra/consul_url"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
-    DEPLOYMENT_DETAILS: "/infra/${app_name}-${env_name}/merge_details"
-
+    
 phases:
   pre_build:
     commands:
@@ -21,15 +20,18 @@ phases:
       - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
       - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
-      - | 
+      - |
+        ### Finishing Deployment/s #####
+        DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
         for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
           _jq() {
             echo $${row} | base64 --decode | jq -r $${1}
             }
-          DEPLOYMENT_ID=$(_jq '.DeploymentId')
-          HOOK_EXECUTION_ID=$(_jq '.HookId')
+          DEPLOYMENT_ID=$(_jq '.DeploymentId.S')
+          HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
           aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
         done
+        aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
   build:
     on-failure: ABORT
     commands:
