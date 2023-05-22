@@ -94,7 +94,7 @@ phases:
             TF_CHANGED="true"
           fi
           consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" blue
-          if [[ $(consul kv get "infra/${app_name}-${env_name}/current_color") == "blue"]]; then
+          if [[ $(consul kv get "infra/${app_name}-${env_name}/current_color") == "blue" ]]; then
             NEXT_COLOR="green"
           else
             NEXT_COLOR="blue"
