@@ -98,14 +98,13 @@ phases:
           artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
-             cd terraform/app
+            cd terraform/app
             terraform init
             COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-$NEXT_COLOR is done.\"}}" -u $BB_USER:$BB_PASS
             terraform workspace select ${env_name}-$NEXT_COLOR || terraform workspace new ${env_name}-blue
             terraform init
             terraform apply -auto-approve || exit 1
-            NEXT_COLOR=$CURRENT_COLOR
             artifact_prefix="${env_name}-$NEXT_COLOR"
             cd -
             COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
