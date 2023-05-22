@@ -94,7 +94,11 @@ phases:
             TF_CHANGED="true"
           fi
           consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" blue
-          NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+          if [[ $(consul kv get "infra/${app_name}-${env_name}/current_color") == "blue"]]; then
+            NEXT_COLOR="green"
+          else
+            NEXT_COLOR="blue"
+          fi
           artifact_prefix="${env_name}-$NEXT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
