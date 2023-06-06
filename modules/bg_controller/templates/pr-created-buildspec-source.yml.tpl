@@ -109,11 +109,12 @@ phases:
             terraform workspace select ${env_name}-$NEXT_COLOR || terraform workspace new ${env_name}-$NEXT_COLOR
             terraform init
             terraform apply -auto-approve || exit 1
+            echo "waiting for terraform to finish..."
+            sleep 60
             cd -
             COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Finished the infrastructure deployment, creation of ${app_name}-$${NEXT_COLOR} is done.\"}}" -u $BB_USER:$BB_PASS
             echo "waiting for terraform to finish"
-            sleep 30
           fi
         fi
       - |
