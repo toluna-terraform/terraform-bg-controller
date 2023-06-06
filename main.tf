@@ -52,7 +52,8 @@ resource "aws_s3_bucket_policy" "codepipeline_bucket" {
           "AWS": [
             "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root",
             "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-          ]
+          ],
+          "Service": "cloudtrail.amazonaws.com"
       },
       "Action": "s3:*",
       "Resource":[ 
