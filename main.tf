@@ -143,17 +143,29 @@ resource "aws_cloudwatch_log_group" "trigger_pipeline" {
   retention_in_days = 3
 }
 
+
 resource "aws_cloudtrail" "trigger_pipeline" {
-  name = "${var.app_name}-${var.env_type}-cloud-trail"
-  s3_bucket_name = aws_s3_bucket.codepipeline_bucket.bucket
+  name                       = "${var.app_name}-${var.env_type}-cloud-trail"
+  s3_bucket_name             = aws_s3_bucket.codepipeline_bucket.bucket
   cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.trigger_pipeline.arn}:*"
   cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_role.arn
-  event_selector {
-    read_write_type           = "WriteOnly"
-    include_management_events = false
-    data_resource {
-      type   = "AWS::S3::Object"
-      values = ["arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.bucket}/*/source_artifacts.zip"]
+  dynamic "event_selector" {
+    for_each = var.apps
+    content {
+      read_write_type           = "WriteOnly"
+      include_management_events = false
+      data_resource {
+        type   = "AWS::S3::Object"
+        values = ["arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.bucket}/${event_selector.key}/source_artifacts.zip"]
+      }
+      data_resource {
+        type   = "AWS::S3::Object"
+        values = ["arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.bucket}/${event_selector.key}-green/source_artifacts.zip"]
+      }
+      data_resource {
+        type   = "AWS::S3::Object"
+        values = ["arn:aws:s3:::${aws_s3_bucket.codepipeline_bucket.bucket}/${event_selector.key}-blue/source_artifacts.zip"]
+      }
     }
   }
 }
