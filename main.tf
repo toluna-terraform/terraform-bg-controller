@@ -77,7 +77,7 @@ resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"
   depends_on = [
-    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket,aws_s3_bucket_ownership_controls.source_codebuild_bucket
+    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket, aws_s3_bucket_ownership_controls.source_codebuild_bucket
   ]
 }
 
@@ -106,4 +106,12 @@ module "merge_waiter" {
   source   = "./modules/merge_waiter"
   app_name = var.app_name
   env_type = var.env_type
+}
+
+module "pipeline_trigger" {
+  source     = "./modules/pipeline_trigger"
+  app_name   = var.app_name
+  env_type   = var.env_type
+  apps       = var.apps
+  depends_on = [aws_s3_bucket.codepipeline_bucket]
 }

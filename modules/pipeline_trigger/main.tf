@@ -1,17 +1,17 @@
 # prepare lambda zip file
 data "archive_file" "pipeline_trigger_zip" {
-    type        = "zip"
-    source_file  = "${path.module}/lambda/pipeline_trigger.js"
-    output_path = "${path.module}/lambda/lambda.zip"
+  type        = "zip"
+  source_file = "${path.module}/lambda/pipeline_trigger.js"
+  output_path = "${path.module}/lambda/lambda.zip"
 }
 
 resource "aws_lambda_function" "pipeline_trigger" {
-  filename      = "${path.module}/lambda/lambda.zip"
-  function_name = "${var.app_name}-${var.env_type}-pipeline-trigger"
-  role          = aws_iam_role.merge_waiter.arn
-  handler       = "pipeline_trigger.handler"
-  runtime       = "nodejs18.x"
-  timeout       = 180
+  filename         = "${path.module}/lambda/lambda.zip"
+  function_name    = "${var.app_name}-${var.env_type}-pipeline-trigger"
+  role             = aws_iam_role.pipeline_trigger.arn
+  handler          = "pipeline_trigger.handler"
+  runtime          = "nodejs16.x"
+  timeout          = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {
     variables = {
@@ -49,8 +49,8 @@ POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
-    role       = "${aws_iam_role.pipeline_trigger.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  role       = "${aws_iam_role.pipeline_trigger.name}"
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 resource "aws_lambda_permission" "allow_bucket" {
@@ -62,14 +62,12 @@ resource "aws_lambda_permission" "allow_bucket" {
 }
 
 resource "aws_s3_bucket_notification" "bucket_notification" {
-  bucket = data.aws_s3_bucket.codepipeline_bucket.id
+  bucket   = data.aws_s3_bucket.codepipeline_bucket.id
 
   lambda_function {
     lambda_function_arn = aws_lambda_function.pipeline_trigger.arn
-    events              = ["s3:PutObject","s3:CompleteMultipartUpload","s3:CopyObject"]
-    filter_prefix       = "${var.env_name}/"
+    events              = ["s3:ObjectCreated:Put", "s3:ObjectCreated:CompleteMultipartUpload", "s3:ObjectCreated:Copy"]
     filter_suffix       = "source_artifacts.zip"
   }
-
   depends_on = [aws_lambda_permission.allow_bucket]
 }

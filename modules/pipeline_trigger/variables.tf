@@ -6,3 +6,5 @@ variable "env_type" {
   type = string
 }
 
+variable "apps" {
+}
