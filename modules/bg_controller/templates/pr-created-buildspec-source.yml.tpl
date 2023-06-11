@@ -95,11 +95,13 @@ phases:
           fi
           consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" blue
           if [[ $(consul kv get "infra/${app_name}-${env_name}/current_color") == "blue" ]]; then
+            CURRENT_COLOR="blue"
             NEXT_COLOR="green"
           else
             NEXT_COLOR="blue"
+            CURRENT_COLOR="green"
           fi
-          artifact_prefix="${env_name}-$NEXT_COLOR"
+          artifact_prefix="${env_name}-$CURRENT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
             cd terraform/app
