@@ -104,6 +104,7 @@ phases:
           artifact_prefix="${env_name}-$CURRENT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
+            artifact_prefix="${env_name}-$NEXT_COLOR"
             cd terraform/app
             terraform init
             COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
