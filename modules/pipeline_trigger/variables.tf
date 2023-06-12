@@ -5,7 +5,3 @@ variable "app_name" {
 variable "env_type" {
   type = string
 }
-
-variable "s3_bucket" {
-  type = string
-}
