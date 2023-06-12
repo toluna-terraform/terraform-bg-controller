@@ -14,11 +14,11 @@ exports.handler = async function (event, context, callback) {
   };
   let pipeline_execution = await codepipeline.startPipelineExecution(params, function (err, data) {
     if (err) {
-      console.log(`ERROR: Failed to start pipeline codepipeline-${pipeline_name}`);
+      console.log(`ERROR: Failed to start pipeline ${pipeline_name}`);
       console.log(err, err.stack)
     }
     else {
-      console.log(`STARTING PIPELINE: codepipeline-${pipeline_name}`)
+      console.log(`STARTING PIPELINE: ${pipeline_name}`)
       console.log("PIPELINE_EXECUTION: \n" +  JSON.stringify(data, null, 2))
     };
   }).promise();
