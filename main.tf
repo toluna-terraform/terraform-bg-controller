@@ -107,3 +107,11 @@ module "merge_waiter" {
   app_name = var.app_name
   env_type = var.env_type
 }
+
+module "pipeline_trigger" {
+  source     = "./modules/pipeline_trigger"
+  app_name   = var.app_name
+  env_type   = var.env_type
+  apps       = var.apps
+  depends_on = [aws_s3_bucket.codepipeline_bucket]
+}
