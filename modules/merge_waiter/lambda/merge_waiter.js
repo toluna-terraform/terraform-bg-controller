@@ -103,10 +103,10 @@ function setBitBucketStatus(username, password, commit_id) {
       key: `${process.env.APP_NAME} IS READY FOR MERGE`,
       state: "SUCCESSFUL",
       description: "PR IS READY FOR MERGE",
-      url: `https://bitbucket.org/tolunaengineering/${process.env.APP_NAME}/commits/${commit_id}`
+      url: `https://bitbucket.org/${process.env.SOURCE_REPOSITORY}/commits/${commit_id}`
     });
     console.log(data);
-    const uri = encodeURI(`/2.0/repositories/tolunaengineering/${process.env.APP_NAME}/commit/${commit_id}/statuses/build/`);
+    const uri = encodeURI(`/2.0/repositories/${process.env.SOURCE_REPOSITORY}/commit/${commit_id}/statuses/build/`);
     const auth = "Basic " + Buffer.from(username + ":" + password).toString("base64");
     const options = {
       hostname: 'api.bitbucket.org',

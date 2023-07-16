@@ -103,9 +103,10 @@ module "source_blue_green" {
 }
 
 module "merge_waiter" {
-  source   = "./modules/merge_waiter"
-  app_name = var.app_name
-  env_type = var.env_type
+  source            = "./modules/merge_waiter"
+  app_name          = var.app_name
+  env_type          = var.env_type
+  source_repository = var.source_repository
 }
 
 module "pipeline_trigger" {
