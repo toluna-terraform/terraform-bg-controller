@@ -1,8 +1,8 @@
 # prepare lambda zip file
 data "archive_file" "merge_waiter_zip" {
-    type        = "zip"
-    source_file  = "${path.module}/lambda/merge_waiter.js"
-    output_path = "${path.module}/lambda/lambda.zip"
+  type        = "zip"
+  source_file  = "${path.module}/lambda/merge_waiter.js"
+  output_path = "${path.module}/lambda/lambda.zip"
 }
 
 resource "aws_lambda_function" "merge_waiter" {
@@ -15,8 +15,9 @@ resource "aws_lambda_function" "merge_waiter" {
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {
     variables = {
-      APP_NAME = var.app_name
-      ENV_TYPE = var.env_type
+      APP_NAME          = var.app_name
+      ENV_TYPE          = var.env_type
+      SOURCE_REPOSITORY = var.source_repository
     }
   }
 }
@@ -48,8 +49,8 @@ POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
-    role       = "${aws_iam_role.merge_waiter.name}"
-    policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
+  role       = "${aws_iam_role.merge_waiter.name}"
+  policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
 
 resource "aws_dynamodb_table" "merge_waiter" {

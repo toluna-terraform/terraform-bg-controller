@@ -27,7 +27,7 @@ phases:
           export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
         fi
         if [[ "${pipeline_type}" != "dev" ]]; then
-          curl -u $BB_USER:$BB_PASS -L "https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
+          curl -u $BB_USER:$BB_PASS -L "https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - export CONSUL_HTTP_ADDR=https://$CONSUL_URL
@@ -45,9 +45,9 @@ phases:
         if [[ "${pipeline_type}" != "dev" ]]; then
         echo "checking for running deployments"
           if [ "$${#inprogress[@]}" -gt 0 ]; then
-            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}" -u $BB_USER:$BB_PASS
-            DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
+            DECLINE_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/decline"
             curl -X POST $DECLINE_URL --data-raw '' -u $BB_USER:$BB_PASS
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
@@ -107,13 +107,13 @@ phases:
             artifact_prefix="${env_name}-$NEXT_COLOR"
             cd terraform/app
             terraform init
-            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-$NEXT_COLOR is done.\"}}" -u $BB_USER:$BB_PASS
             terraform workspace select ${env_name}-$NEXT_COLOR || terraform workspace new ${env_name}-$NEXT_COLOR
             terraform init
             terraform apply -auto-approve || exit 1
             cd -
-            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Finished the infrastructure deployment, creation of ${app_name}-$${NEXT_COLOR} is done.\"}}" -u $BB_USER:$BB_PASS
           fi
         fi
