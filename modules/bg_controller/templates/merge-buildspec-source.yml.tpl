@@ -41,31 +41,29 @@ phases:
   build:
     on-failure: ABORT
     commands:
-      - INFRA_CHANGED=$(consul kv get "infra/${app_name}-${env_name}/infra_changed")
-      - echo "INFRA_CHANGED =" $INFRA_CHANGED
-      - CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
-      - echo "CURRENT_COLOR = " $CURRENT_COLOR 
       - |
-        if [ "$CURRENT_COLOR" != "green" ] && [ "$CURRENT_COLOR" != "blue" ]; then
-          echo "Creating Green route"
-          NEXT_COLOR="green"
-          CURRENT_COLOR="white"
-          CURRENT_RECORD="DUMMY_Blue"
-        else 
-          echo "switching colors"
-          if [[ $CURRENT_COLOR == "green" ]]; then
-            NEXT_COLOR="blue"
-            CURRENT_COLOR="green"
-          else
-            NEXT_COLOR="green"
-            CURRENT_COLOR="blue"
-          fi
-        fi
-        echo "NEXT_COLOR = " $NEXT_COLOR
-        consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
-      - |
-        # below code applies only if INFRA_CHANGED
+        INFRA_CHANGED=$(consul kv get "infra/${app_name}-${env_name}/infra_changed")
+        echo "INFRA_CHANGED =" $INFRA_CHANGED
         if [ "$INFRA_CHANGED" == "true" ]; then
+          CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+          echo "CURRENT_COLOR = " $CURRENT_COLOR 
+          if [ "$CURRENT_COLOR" != "green" ] && [ "$CURRENT_COLOR" != "blue" ]; then
+            echo "Creating Green route"
+            NEXT_COLOR="green"
+            CURRENT_COLOR="white"
+            CURRENT_RECORD="DUMMY_Blue"
+          else 
+            echo "switching colors"
+            if [[ $CURRENT_COLOR == "green" ]]; then
+              NEXT_COLOR="blue"
+              CURRENT_COLOR="green"
+            else
+              NEXT_COLOR="green"
+              CURRENT_COLOR="blue"
+            fi
+          fi
+          echo "NEXT_COLOR = " $NEXT_COLOR
+          consul kv put "infra/${app_name}-${env_name}/current_color" $NEXT_COLOR
           consul kv delete "infra/${app_name}-${env_name}/infra_changed"
           echo "Shifting traffic"
           cd $CODEBUILD_SRC_DIR/terraform/shared

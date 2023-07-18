@@ -20,9 +20,10 @@ resource "aws_lambda_function" "appmesh_sf_task_token" {
 
   environment {
     variables = {
-      APP_NAME = var.app_name
-      ENV_NAME = var.env_name
-      ENV_TYPE = var.env_type
+      APP_NAME          = var.app_name
+      ENV_NAME          = var.env_name
+      ENV_TYPE          = var.env_type
+      SOURCE_REPOSITORY = var.source_repository
     }
   }
 

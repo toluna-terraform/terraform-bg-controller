@@ -10,7 +10,8 @@ data "aws_iam_policy_document" "codebuild_assume_role_policy" {
         "cloudformation.amazonaws.com",
         "iam.amazonaws.com",
         "ssm.amazonaws.com",
-        "route53.amazonaws.com"
+        "route53.amazonaws.com",
+        "cloudtrail.amazonaws.com"
       ]
     }
   }

@@ -27,7 +27,7 @@ phases:
           export PR_NUMBER=$CODEBUILD_WEBHOOK_HEAD_REF
         fi
         if [[ "${pipeline_type}" != "dev" ]]; then
-          curl -u $BB_USER:$BB_PASS -L "https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
+          curl -u $BB_USER:$BB_PASS -L "https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/diffstat" | jq -r '.values[].old.path, .values[].new.path' > /tmp/diff_results.txt
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - export CONSUL_HTTP_ADDR=https://$CONSUL_URL
@@ -40,14 +40,14 @@ phases:
         if [[ $CURRENT_COLOR == "green" ]] || [[ $CURRENT_COLOR == "blue" ]]; then
           export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
         else
-        export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
+          export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name} --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
         fi
         if [[ "${pipeline_type}" != "dev" ]]; then
         echo "checking for running deployments"
           if [ "$${#inprogress[@]}" -gt 0 ]; then
-            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL--header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"There is already a pull request open for this branch, only one deployment and pr per branch at a time are allowed\"}}" -u $BB_USER:$BB_PASS
-            DECLINE_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/decline"
+            DECLINE_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/decline"
             curl -X POST $DECLINE_URL --data-raw '' -u $BB_USER:$BB_PASS
             aws codebuild stop-build --id $CODEBUILD_BUILD_ID
           fi
@@ -93,32 +93,27 @@ phases:
           else 
             TF_CHANGED="true"
           fi
-          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" green
-          NEXT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
-          artifact_prefix="${env_name}-$NEXT_COLOR"
+          consul kv get "infra/${app_name}-${env_name}/current_color" || consul kv put "infra/${app_name}-${env_name}/current_color" blue
+          if [[ $(consul kv get "infra/${app_name}-${env_name}/current_color") == "blue" ]]; then
+            CURRENT_COLOR="blue"
+            NEXT_COLOR="green"
+          else
+            NEXT_COLOR="blue"
+            CURRENT_COLOR="green"
+          fi
+          artifact_prefix="${env_name}-$CURRENT_COLOR"
           echo "did tf have changes $${TF_CHANGED}"
           if [[ "${is_managed_env}" == "true" ]] && [[ $TF_CHANGED == "true" ]]; then
-             cd terraform/app
+            artifact_prefix="${env_name}-$NEXT_COLOR"
+            cd terraform/app
             terraform init
-            if [[ $CURRENT_COLOR == "green" ]]; then
-              COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-              curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-blue is done.\"}}" -u $BB_USER:$BB_PASS
-              terraform workspace select ${env_name}-blue || terraform workspace new ${env_name}-blue
-              terraform init
-              terraform apply -auto-approve || exit 1
-              NEXT_COLOR="blue"
-              artifact_prefix="${env_name}-blue"
-            else 
-              COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
-              curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-green is done.\"}}" -u $BB_USER:$BB_PASS
-              terraform workspace select ${env_name}-green || terraform workspace new ${env_name}-green
-              terraform init
-              terraform apply -auto-approve || exit 1
-              NEXT_COLOR="green"
-              artifact_prefix="${env_name}-green"
-            fi
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
+            curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Started infrastructure deployment, creating ${app_name}-$NEXT_COLOR is done.\"}}" -u $BB_USER:$BB_PASS
+            terraform workspace select ${env_name}-$NEXT_COLOR || terraform workspace new ${env_name}-$NEXT_COLOR
+            terraform init
+            terraform apply -auto-approve || exit 1
             cd -
-            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/tolunaengineering/${app_name}/pullrequests/$PR_NUMBER/comments"
+            COMMENT_URL="https://api.bitbucket.org/2.0/repositories/${source_repository}/pullrequests/$PR_NUMBER/comments"
             curl --request POST --url $COMMENT_URL --header "Content-Type:application/json" --data "{\"content\":{\"raw\":\"Finished the infrastructure deployment, creation of ${app_name}-$${NEXT_COLOR} is done.\"}}" -u $BB_USER:$BB_PASS
           fi
         fi

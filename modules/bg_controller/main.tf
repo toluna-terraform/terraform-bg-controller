@@ -105,23 +105,22 @@ resource "aws_codebuild_project" "pr_codebuild" {
   source {
     type      = "BITBUCKET"
     location  = local.source_repository_url
-    buildspec = templatefile("${path.module}/templates/pr-created-buildspec-source.yml.tpl", 
-      { 
-        env_name = var.env_name, 
-        env_type = var.env_type, 
-        app_name = var.app_name, 
-        domain = var.domain, 
-        hosted_zone_id = data.aws_route53_zone.public.zone_id, 
-        is_managed_env = var.is_managed_env, 
-        pipeline_type = var.pipeline_type, 
-        aws_profile = var.aws_profile 
-      })
-  }
-  tags = tomap({
-    Name        = "${local.prefix}-${local.codebuild_name}",
-    environment = "${var.env_name}",
-    created_by  = "terraform"
-  })
+    buildspec = templatefile("${path.module}/templates/pr-created-buildspec-source.yml.tpl",
+    { env_name = var.env_name,
+      env_type = var.env_type,
+      app_name = var.app_name,
+      domain = var.domain,
+      source_repository = var.source_repository,
+      hosted_zone_id = data.aws_route53_zone.public.zone_id,
+      is_managed_env = var.is_managed_env,
+      pipeline_type = var.pipeline_type,
+      aws_profile = var.aws_profile })
+    }
+    tags = tomap({
+      Name        = "${local.prefix}-${local.codebuild_name}",
+      environment = "${var.env_name}",
+      created_by  = "terraform"
+    })
 }
 
 resource "aws_codebuild_project" "merge_codebuild" {

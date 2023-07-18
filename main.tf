@@ -52,7 +52,8 @@ resource "aws_s3_bucket_policy" "codepipeline_bucket" {
           "AWS": [
             "arn:aws:iam::${data.aws_caller_identity.prod.account_id}:root",
             "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
-          ]
+          ],
+          "Service": "cloudtrail.amazonaws.com"
       },
       "Action": "s3:*",
       "Resource":[ 
@@ -65,12 +66,18 @@ resource "aws_s3_bucket_policy" "codepipeline_bucket" {
 POLICY
 }
 
+resource "aws_s3_bucket_ownership_controls" "source_codebuild_bucket" {
+  bucket = aws_s3_bucket.codepipeline_bucket.id
+  rule {
+    object_ownership = "BucketOwnerPreferred"
+  }
+}
 
 resource "aws_s3_bucket_acl" "source_codebuild_bucket" {
   bucket = aws_s3_bucket.codepipeline_bucket.id
   acl    = "private"
   depends_on = [
-    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket
+    aws_s3_bucket.codepipeline_bucket, aws_s3_bucket_versioning.codepipeline_bucket,aws_s3_bucket_ownership_controls.source_codebuild_bucket
   ]
 }
 
@@ -98,7 +105,15 @@ module "source_blue_green" {
 }
 
 module "merge_waiter" {
-  source   = "./modules/merge_waiter"
-  app_name = var.app_name
-  env_type = var.env_type
+  source            = "./modules/merge_waiter"
+  app_name          = var.app_name
+  env_type          = var.env_type
+  source_repository = var.source_repository
+}
+
+module "pipeline_trigger" {
+  source     = "./modules/pipeline_trigger"
+  app_name   = var.app_name
+  env_type   = var.env_type
+  depends_on = [aws_s3_bucket.codepipeline_bucket]
 }
