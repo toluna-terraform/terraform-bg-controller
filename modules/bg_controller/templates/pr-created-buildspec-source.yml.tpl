@@ -5,15 +5,33 @@ env:
   parameter-store:
     BB_USER: "/app/bb_user"  
     BB_PASS: "/app/bb_app_pass"
+    BB_KEY: "/app/bb_key"
     CONSUL_URL: "/infra/consul_url"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
-  
+
 phases:
   pre_build:
     commands:
-      - yum install -y yum-utils
+      - |
+        if [ -a ".gitmodules" ];  # "Checking if the project uses git submodules"
+        then
+          #
+          # "Add the "codepipeline user's" ssh key and activate it - this allows us to get private (sub) repositories."
+          # "codepipeline user is a faceless user that have a ssh keys for sub module flow, the key is store in /app/bb_key ssm parameter."
+          #
+          echo "Project uses git submodules"
+          mkdir -p ~/.ssh                     # "Ensure the .ssh directory exists"
+          echo "$BB_KEY" > ~/.ssh/id_rsa      # "Save the codepipeline user's private key"
+          chmod 600 ~/.ssh/id_rsa             # "Adjust the private key permissions (avoids a critical error)"
+          eval "$(ssh-agent -s)"              # "Initialize the ssh agent"
+          ssh-add ~/.ssh/id_rsa               # "Add the codepipeline user's key to the ssh "keychain""
+          git submodule update --init --recursive   
+        else
+          echo "Project doesn't use git submodules"
+        fi
+      - yum install -y yum-utils 
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
-      - yum -y install terraform consul
+      - yum -y install terraform consul   # "Installing consul binary to interact with Consul backend"
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}/source_artifacts.zip
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-green/source_artifacts.zip
       - aws s3api delete-object --bucket s3-codepipeline-${app_name}-${env_type} --key ${env_name}-blue/source_artifacts.zip
@@ -31,11 +49,7 @@ phases:
         fi
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - export CONSUL_HTTP_ADDR=https://$CONSUL_URL
-      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
-      - export CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")
+      - export CURRENT_COLOR=$(consul kv get "infra/${app_name}-${env_name}/current_color")   # "Checking the current color of the environment"
       - |
         if [[ $CURRENT_COLOR == "green" ]] || [[ $CURRENT_COLOR == "blue" ]]; then
           export inprogress=($(aws codepipeline list-action-executions --pipeline-name codepipeline-${app_name}-${env_name}-$CURRENT_COLOR --query 'actionExecutionDetails[?status==`InProgress`].status' --output text))
