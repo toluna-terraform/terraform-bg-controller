@@ -5,7 +5,6 @@ env:
   parameter-store:
     BB_USER: "/app/bb_user"  
     BB_PASS: "/app/bb_app_pass"
-    BB_KEY: "/app/bb_key"
     CONSUL_URL: "/infra/consul_url"
     CONSUL_HTTP_TOKEN: "/infra/${app_name}-${env_type}/consul_http_token"
 
@@ -20,6 +19,11 @@ phases:
           # "codepipeline user is a faceless user that have a ssh keys for sub module flow, the key is store in /app/bb_key ssm parameter."
           #
           echo "Project uses git submodules"
+          BB_KEY=$(aws ssm get-parameter --name "/app/bb_key" \
+          --with-decryption \
+          --output text \
+          --query Parameter.Value)
+
           mkdir -p ~/.ssh                     # "Ensure the .ssh directory exists"
           echo "$BB_KEY" > ~/.ssh/id_rsa      # "Save the codepipeline user's private key"
           chmod 600 ~/.ssh/id_rsa             # "Adjust the private key permissions (avoids a critical error)"
