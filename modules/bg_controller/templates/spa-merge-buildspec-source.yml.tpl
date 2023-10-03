@@ -10,6 +10,7 @@ phases:
   pre_build:
     commands:
       - yum install -y yum-utils
+      - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
   build:
     on-failure: ABORT
     commands:
@@ -26,4 +27,7 @@ phases:
         echo "}"  >> approvalstage-approved.json
         echo "}"  >> approvalstage-approved.json
         aws codepipeline put-approval-result --cli-input-json file://approvalstage-approved.json
+      %{ if env_type == "prod" }
+      - aws lambda invoke --function-name ${app_name}-${env_type}-notifier --cli-binary-format raw-in-base64-out --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": '"$CODEBUILD_WEBHOOK_TRIGGER"'}' response.json
+      %{ endif }
         
