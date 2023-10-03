@@ -89,4 +89,7 @@ phases:
           fi
         fi
       - export DEPLOYMENT_TYPE=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/deployment_type" | jq -r .Parameter.Value `
-
+      %{ if env_type == "prod" }
+      - |
+        ${TEAMS_NOTIFICATION}
+      %{ endif }

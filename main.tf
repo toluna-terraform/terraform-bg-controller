@@ -109,6 +109,13 @@ module "merge_waiter" {
   source_repository = var.source_repository
 }
 
+module "notifier" {
+  count = var.env_type == "prod" ? 1 : 0
+  source            = "./modules/notifier"
+  app_name          = var.app_name
+  source_repository = var.source_repository
+}
+
 module "pipeline_trigger" {
   source     = "./modules/pipeline_trigger"
   app_name   = var.app_name

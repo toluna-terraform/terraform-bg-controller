@@ -163,7 +163,8 @@ resource "aws_codebuild_project" "merge_codebuild" {
         app_type       = var.app_type,
         domain         = var.domain,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
-        aws_profile    = var.aws_profile
+        aws_profile    = var.aws_profile,
+        source_repository = var.source_repository,
         ttl            = var.ttl
       }) : var.app_type == "sam" ? templatefile("${path.module}/templates/sam-merge-buildspec-source.yml.tpl",
       {
@@ -173,7 +174,8 @@ resource "aws_codebuild_project" "merge_codebuild" {
         app_type       = var.app_type,
         domain         = var.domain,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
-        aws_profile    = var.aws_profile
+        aws_profile    = var.aws_profile,
+        source_repository = var.source_repository,
         ttl            = var.ttl
       }) : templatefile("${path.module}/templates/spa-merge-buildspec-source.yml.tpl",
       {
@@ -182,6 +184,7 @@ resource "aws_codebuild_project" "merge_codebuild" {
         domain         = var.domain,
         app_type       = var.app_type,
         hosted_zone_id = data.aws_route53_zone.public.zone_id,
+        source_repository = var.source_repository,
         aws_profile    = var.aws_profile
     })
   }
