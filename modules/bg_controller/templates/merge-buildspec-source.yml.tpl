@@ -18,22 +18,20 @@ phases:
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - |
         #### Retrieve deployment details from DynmoDB table and terminate deployments ###
-        if [ "$DEPLOYMENT_TYPE" != "AppMesh" ]; then
-          DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
-          for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
-            _jq() {
-              echo $${row} | base64 --decode | jq -r $${1}
-              }
-            DEPLOYMENT_ID=$(_jq '.DeploymentId.S')
-            HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
-            aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
-            DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
-            if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
-              aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
-            fi
-          done
-          aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
-        fi
+        DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
+        for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
+          _jq() {
+            echo $${row} | base64 --decode | jq -r $${1}
+            }
+          DEPLOYMENT_ID=$(_jq '.DeploymentId.S')
+          HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
+          aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
+          DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
+          if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
+            aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
+          fi
+        done
+        aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
   build:
     on-failure: ABORT
     commands:

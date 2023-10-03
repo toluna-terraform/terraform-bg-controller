@@ -38,14 +38,7 @@ exports.handler = async function (event, context, callback) {
         console.log(data);
       }// successful response
     }).promise();
-    if (event.DeploymentType == "AppMesh") {
-      environment = event.environment;
-      platform = "AppMesh"
-      console.log("environment = " + environment);
-    }
-    else {
-      platform = deploy_details.deploymentInfo.computePlatform;
-    }
+    platform = deploy_details.deploymentInfo.computePlatform;
     if (platform === "ECS") {
       environment = deploy_details.deploymentInfo.applicationName.replace(`ecs-deploy-`, "");
       environment = environment.replace(`${process.env.APP_NAME}-`, "");
@@ -79,20 +72,6 @@ exports.handler = async function (event, context, callback) {
         const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
         await setBitBucketStatus(username, password, commit_id);
       }
-    }
-    if (platform === "AppMesh") {
-      taskToken1 = event.taskToken;
-      let merge_details = JSON.parse(`{"DeploymentId":\"${deploymentId}\","HookId":\"${hookId}\"}`);
-      await setDeployDetails(`${process.env.APP_NAME}-${environment}`, merge_details);
-      const commit_id = await getSSMParam(`/infra/${process.env.APP_NAME}-${environment}/commit_id`, true);
-      await setBitBucketStatus(username, password, commit_id);
-      console.log("taskToken = " + taskToken1);
-      let params = {
-        taskToken: taskToken1,
-        output: JSON.stringify({ "StatusCode": "200" })
-      };
-      await sf.sendTaskSuccess(params).promise();
-      console.log("calledbck SF with taskToken = " + taskToken1);
     }
   }
 };
