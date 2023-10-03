@@ -89,12 +89,4 @@ phases:
           fi
         fi
       - export DEPLOYMENT_TYPE=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/deployment_type" | jq -r .Parameter.Value `
-      - |
-        if [ "$DEPLOYMENT_TYPE" == "AppMesh" ]; then
-          # --- get value of task token from SSM parameter (which is stored by SF step)
-          export TASK_TOKEN=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/task_token" | jq -r .Parameter.Value `
-          echo $TASK_TOKEN
-          export FUNCTION_NAME="${app_name}-${env_name}-appmesh-sf-task-token"
-          echo $FUNCTION_NAME
-          aws lambda invoke --function-name $FUNCTION_NAME --invocation-type Event --payload "{ \"CallerId\":\"CodeBuild\", \"TaskToken\":\"$TASK_TOKEN\", \"StatusCode\":\"200\"  }" /dev/null
-        fi
+
