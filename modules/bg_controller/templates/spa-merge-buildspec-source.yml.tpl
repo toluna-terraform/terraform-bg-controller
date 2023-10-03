@@ -28,6 +28,6 @@ phases:
         echo "}"  >> approvalstage-approved.json
         aws codepipeline put-approval-result --cli-input-json file://approvalstage-approved.json
       %{ if env_type == "prod" }
-      - aws lambda invoke --function-name ${app_name}-${env_type}-notifier --cli-binary-format raw-in-base64-out --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": '"$CODEBUILD_WEBHOOK_TRIGGER"'}' response.json
+      - aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": '"$CODEBUILD_WEBHOOK_TRIGGER"'}' response.json
       %{ endif }
         

@@ -113,6 +113,7 @@ module "notifier" {
   count = var.env_type == "prod" ? 1 : 0
   source            = "./modules/notifier"
   app_name          = var.app_name
+  env_type          = var.env_type
   source_repository = var.source_repository
 }
 

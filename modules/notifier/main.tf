@@ -33,7 +33,7 @@ resource "aws_iam_role" "notifier" {
       "Action": "sts:AssumeRole",
       "Principal": {
         "Service": [
-          "codebuild.amazonaws.com
+          "codebuild.amazonaws.com",
           "codedeploy.amazonaws.com",
           "codepipeline.amazonaws.com",
           "lambda.amazonaws.com",
@@ -49,6 +49,6 @@ POLICY
 }
 
 resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
-  role       = aws_iam_role.merge_waiter.name
+  role       = aws_iam_role.notifier.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }

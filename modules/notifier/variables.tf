@@ -5,3 +5,7 @@ variable "app_name" {
 variable "source_repository" {
     type = string
 }
+
+variable "env_type" {
+  type = string
+}
