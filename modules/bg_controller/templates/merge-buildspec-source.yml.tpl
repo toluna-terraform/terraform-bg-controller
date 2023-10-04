@@ -15,29 +15,23 @@ phases:
       - yum-config-manager --add-repo https://rpm.releases.hashicorp.com/AmazonLinux/hashicorp.repo
       - yum -y install terraform consul
       - export CONSUL_HTTP_ADDR=https://$CONSUL_URL
-      - export MONGODB_ATLAS_PROJECT_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_project_id --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PUBLIC_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_public_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_PRIVATE_KEY=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_private_key --query 'Parameters[].Value' --output text)
-      - export MONGODB_ATLAS_ORG_ID=$(aws ssm get-parameters --with-decryption --names /infra/${app_name}-${env_type}/mongodb_atlas_org_id --query 'Parameters[].Value' --output text)
       - printf "%s\n%s\nus-east-1\njson" | aws configure --profile ${aws_profile}
       - |
         #### Retrieve deployment details from DynmoDB table and terminate deployments ###
-        if [ "$DEPLOYMENT_TYPE" != "AppMesh" ]; then
-          DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
-          for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
-            _jq() {
-              echo $${row} | base64 --decode | jq -r $${1}
-              }
-            DEPLOYMENT_ID=$(_jq '.DeploymentId.S')
-            HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
-            aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
-            DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
-            if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
-              aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
-            fi
-          done
-          aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
-        fi
+        DEPLOYMENT_DETAILS=$(aws dynamodb get-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}' --attributes-to-get '["Details"]' --query 'Item.Details.L[].M') 
+        for row in $(echo "$${DEPLOYMENT_DETAILS}" | jq -r '.[] | @base64'); do
+          _jq() {
+            echo $${row} | base64 --decode | jq -r $${1}
+            }
+          DEPLOYMENT_ID=$(_jq '.DeploymentId.S')
+          HOOK_EXECUTION_ID=$(_jq '.LifecycleEventHookExecutionId.S')
+          aws deploy put-lifecycle-event-hook-execution-status --deployment-id $DEPLOYMENT_ID --lifecycle-event-hook-execution-id $HOOK_EXECUTION_ID --status Succeeded --output text
+          DEPLOY_STATUS=$(aws deploy get-deployment --deployment-id $DEPLOYMENT_ID --query 'deploymentInfo.status' --output text)
+          if [ "$DEPLOY_STATUS" = "InProgress" ] || [ "$DEPLOY_STATUS" = "Ready" ]; then
+            aws deploy continue-deployment --deployment-id $DEPLOYMENT_ID --deployment-wait-type TERMINATION_WAIT
+          fi
+        done
+        aws dynamodb delete-item --table-name MergeWaiter-${app_name}-${env_type} --key '{"APPLICATION" :{"S":"${app_name}-${env_name}"}}'
   build:
     on-failure: ABORT
     commands:
@@ -71,6 +65,9 @@ phases:
           terraform workspace select shared-${env_type}
           terraform init
           terraform apply -target=module.dns -auto-approve || exit 1
+          %{ if env_type == "prod" }
+          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": "'$CODEBUILD_WEBHOOK_TRIGGER'"}' response.json
+          %{ endif }
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then
@@ -91,14 +88,11 @@ phases:
             terraform workspace delete ${env_name} || echo "no base workspace to delete"
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
+        else
+          echo "Checking if need to send notification"
+        %{ if env_type == "prod" }
+          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": "'$CODEBUILD_WEBHOOK_TRIGGER'"}' response.json
+        %{ endif }
         fi
       - export DEPLOYMENT_TYPE=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/deployment_type" | jq -r .Parameter.Value `
-      - |
-        if [ "$DEPLOYMENT_TYPE" == "AppMesh" ]; then
-          # --- get value of task token from SSM parameter (which is stored by SF step)
-          export TASK_TOKEN=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/task_token" | jq -r .Parameter.Value `
-          echo $TASK_TOKEN
-          export FUNCTION_NAME="${app_name}-${env_name}-appmesh-sf-task-token"
-          echo $FUNCTION_NAME
-          aws lambda invoke --function-name $FUNCTION_NAME --invocation-type Event --payload "{ \"CallerId\":\"CodeBuild\", \"TaskToken\":\"$TASK_TOKEN\", \"StatusCode\":\"200\"  }" /dev/null
-        fi
+
