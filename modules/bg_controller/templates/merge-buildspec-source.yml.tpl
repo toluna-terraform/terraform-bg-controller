@@ -66,7 +66,7 @@ phases:
           terraform init
           terraform apply -target=module.dns -auto-approve || exit 1
           %{ if env_type == "prod" }
-          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": '"$CODEBUILD_WEBHOOK_TRIGGER"'}' response.json
+          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": "'$CODEBUILD_WEBHOOK_TRIGGER'"}' response.json
           %{ endif }
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
@@ -91,7 +91,7 @@ phases:
         else
           echo "Checking if need to send notification"
         %{ if env_type == "prod" }
-          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": '"$CODEBUILD_WEBHOOK_TRIGGER"'}' response.json
+          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload  '{"CODEBUILD_WEBHOOK_TRIGGER": "'$CODEBUILD_WEBHOOK_TRIGGER'"}' response.json
         %{ endif }
         fi
       - export DEPLOYMENT_TYPE=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/deployment_type" | jq -r .Parameter.Value `
