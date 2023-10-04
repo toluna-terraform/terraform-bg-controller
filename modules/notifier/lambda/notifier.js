@@ -1,9 +1,6 @@
 const https = require('https');
 const AWS = require('aws-sdk');
 const ssm = new AWS.SSM({ apiVersion: '2014-11-06', region: 'us-east-1' });
-//const webhookURL = `${process.env.SOURCE_REPOSITORY}`;
-
-
 
 async function getBitBucketPRStatus(username, password, pr_id) {
   const uri = encodeURI(`/2.0/repositories/${process.env.SOURCE_REPOSITORY}/pullrequests/${pr_id}`);
@@ -96,7 +93,7 @@ function sendTeamsNotification(AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WE
         'Content-Type': 'application/json',
       },
     };
-
+    console.log(`Sending Teams Notification: ${data}`);
     const req = https.request(options, res => {
       console.log(`statusCode: ${res.statusCode}`);
       res.on('data', d => {
