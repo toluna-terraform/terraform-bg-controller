@@ -51,16 +51,16 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
   }
 }
 
-function sendTeamsNotification(AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK) {
+function sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME) {
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       "@type": "MessageCard",
       "@context": "http://schema.org/extensions",
       "themeColor": "16d700",
-      "summary": "Deploy to Production Done",
+      "summary": `${APP_NAME} Deploy to Production Done`,
       "sections": [{
-        "activityTitle": "Deploy to Production",
-        "activitySubtitle": `${process.env.APP_NAME} Deployed to Production`,
+        "activityTitle": `${APP_NAME} Deploy to Production`,
+        "activitySubtitle": `${APP_NAME} of Tribe ${TRIBE_NAME}`,
         "activityImage": "",
         "facts": [{
           "name": "URL",
@@ -68,7 +68,7 @@ function sendTeamsNotification(AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WE
         },
         {
           "name": "Service Name",
-          "value": `${process.env.APP_NAME}`
+          "value": `${APP_NAME}`
         },
         {
           "name": "Commit Id",
@@ -120,6 +120,7 @@ exports.handler = async (event) => {
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
   const TEAMS_WEBHOOK = await getSSMParam('/infra/teams_notification_webhook', true);
+  const TRIBE_NAME = await getSSMParam('/infra/tribe', true, "(Tribe is undefind, please add tribe name to ssm parameter '/infra/tribe')");
   const pr_id = event.CODEBUILD_WEBHOOK_TRIGGER.replaceAll("pr/", "");
   const bb_pr = await getBitBucketPRStatus(username, password, pr_id);
   const bb_payload = JSON.parse(bb_pr)
@@ -127,5 +128,6 @@ exports.handler = async (event) => {
   const MERGED_BY = bb_payload.closed_by.display_name;
   const MERGE_COMMIT = bb_payload.merge_commit.hash;
   const PR_URL = bb_payload.links.html.href;
-  await sendTeamsNotification(AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK)
+  const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
+  await sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME)
 };
