@@ -64,12 +64,12 @@ resource "aws_codebuild_webhook" "merge_dev_flow_hook_webhook" {
 
     filter {
       type    = "HEAD_REF"
-      pattern = var.trigger_branch
+      pattern = "^refs/heads/${var.trigger_branch}$"
     }
 
     filter {
       type    = "FILE_PATH"
-      pattern = "^refs/heads/${var.trigger_branch}$"
+      pattern = var.path_pattern
     }
   }
 }
