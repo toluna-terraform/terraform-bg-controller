@@ -20,7 +20,7 @@ resource "aws_codebuild_webhook" "pr_flow_hook_webhook" {
 
     filter {
       type    = var.pipeline_type == "dev" ? "HEAD_REF" : "BASE_REF"
-      pattern = var.trigger_branch
+      pattern = "^refs/heads/${var.trigger_branch}$"
     }
 
     filter {
@@ -42,7 +42,7 @@ resource "aws_codebuild_webhook" "merge_flow_hook_webhook" {
 
     filter {
       type    = "BASE_REF"
-      pattern = var.trigger_branch
+      pattern = "^refs/heads/${var.trigger_branch}$"
     }
 
     filter {
@@ -69,7 +69,7 @@ resource "aws_codebuild_webhook" "merge_dev_flow_hook_webhook" {
 
     filter {
       type    = "FILE_PATH"
-      pattern = var.path_pattern
+      pattern = "^refs/heads/${var.trigger_branch}$"
     }
   }
 }
