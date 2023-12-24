@@ -3,7 +3,7 @@ resource "aws_lambda_function" "pipeline_trigger" {
   function_name    = "${var.app_name}-${var.env_type}-pipeline-trigger"
   role             = aws_iam_role.pipeline_trigger.arn
   handler          = "pipeline_trigger.handler"
-  runtime          = "nodejs16.x"
+  runtime          = "nodejs20.x"
   timeout          = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {

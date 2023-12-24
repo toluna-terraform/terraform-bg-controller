@@ -10,7 +10,7 @@ resource "aws_lambda_function" "notifier" {
   function_name    = "${var.app_name}-${var.env_type}-notifier"
   role             = aws_iam_role.notifier.arn
   handler          = "notifier.handler"
-  runtime          = "nodejs16.x"
+  runtime          = "nodejs20.x"
   timeout          = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {
