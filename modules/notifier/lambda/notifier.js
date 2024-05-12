@@ -131,7 +131,7 @@ exports.handler = async (event) => {
   const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
   const TEAMS_WEBHOOKS = TEAMS_WEBHOOK_LIST.split(',');
   TEAMS_WEBHOOKS.forEach(function(TEAMS_WEBHOOK) {
-    sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME);
+    sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK.trim(), TRIBE_NAME);
   });
   
 };
