@@ -119,7 +119,7 @@ exports.handler = async (event) => {
   console.log(event)
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
-  const TEAMS_WEBHOOK = await getSSMParam('/infra/teams_notification_webhook', true);
+  const TEAMS_WEBHOOK_LIST = await getSSMParam('/infra/teams_notification_webhook', true);
   const TRIBE_NAME = await getSSMParam('/infra/tribe', true, "(Tribe is undefind, please add tribe name to ssm parameter '/infra/tribe')");
   const pr_id = event.CODEBUILD_WEBHOOK_TRIGGER.replaceAll("pr/", "");
   const bb_pr = await getBitBucketPRStatus(username, password, pr_id);
@@ -129,5 +129,9 @@ exports.handler = async (event) => {
   const MERGE_COMMIT = bb_payload.merge_commit.hash;
   const PR_URL = bb_payload.links.html.href;
   const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
-  await sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME)
+  const TEAMS_WEBHOOKS = TEAMS_WEBHOOK_LIST.split(',');
+  TEAMS_WEBHOOKS.forEach(function(TEAMS_WEBHOOK) {
+    sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK.trim(), TRIBE_NAME);
+  });
+  
 };
