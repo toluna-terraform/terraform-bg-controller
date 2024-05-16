@@ -51,15 +51,16 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
   }
 }
 
-function sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME) {
+function sendTeamsNotification(APP_NAME,ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME) {
+  ENV_NAME = (ENV_NAME.toLowerCase() == "prod") ? "Production" : ENV_NAME
   return new Promise((resolve, reject) => {
     const data = JSON.stringify({
       "@type": "MessageCard",
       "@context": "http://schema.org/extensions",
       "themeColor": "16d700",
-      "summary": `${APP_NAME} Deploy to Production Done`,
+      "summary": `${APP_NAME} Deploy to ${ENV_NAME} Done`,
       "sections": [{
-        "activityTitle": `${APP_NAME} Deploy to Production`,
+        "activityTitle": `${APP_NAME} Deploy to ${ENV_NAME}`,
         "activitySubtitle": `${APP_NAME} of Tribe ${TRIBE_NAME}`,
         "activityImage": "",
         "facts": [{
@@ -125,13 +126,14 @@ exports.handler = async (event) => {
   const bb_pr = await getBitBucketPRStatus(username, password, pr_id);
   const bb_payload = JSON.parse(bb_pr)
   const AUTHOR = bb_payload.author.display_name;
+  const ENV_NAME = event.ENV_NAME;
   const MERGED_BY = bb_payload.closed_by.display_name;
   const MERGE_COMMIT = bb_payload.merge_commit.hash;
   const PR_URL = bb_payload.links.html.href;
   const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
   const TEAMS_WEBHOOKS = TEAMS_WEBHOOK_LIST.split(',');
   TEAMS_WEBHOOKS.forEach(function(TEAMS_WEBHOOK) {
-    sendTeamsNotification(APP_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK.trim(), TRIBE_NAME);
+    sendTeamsNotification(APP_NAME, ENV_NAME,AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK.trim(), TRIBE_NAME);
   });
   
 };
