@@ -118,15 +118,16 @@ function sendTeamsNotification(APP_NAME,ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MER
 
 exports.handler = async (event) => {
   console.log(event)
+  const ENV_NAME = event.ENV_NAME;
+  const HOOK_ID  = (ENV_NAME.toLowerCase() == "prod") ? '/infra/teams_notification_webhook' : '/infra/non_prod/teams_notification_webhook'
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
-  const TEAMS_WEBHOOK_LIST = await getSSMParam('/infra/teams_notification_webhook', true);
+  const TEAMS_WEBHOOK_LIST = await getSSMParam(HOOK_ID, true);
   const TRIBE_NAME = await getSSMParam('/infra/tribe', true, "(Tribe is undefind, please add tribe name to ssm parameter '/infra/tribe')");
   const pr_id = event.CODEBUILD_WEBHOOK_TRIGGER.replaceAll("pr/", "");
   const bb_pr = await getBitBucketPRStatus(username, password, pr_id);
   const bb_payload = JSON.parse(bb_pr)
   const AUTHOR = bb_payload.author.display_name;
-  const ENV_NAME = event.ENV_NAME;
   const MERGED_BY = bb_payload.closed_by.display_name;
   const MERGE_COMMIT = bb_payload.merge_commit.hash;
   const PR_URL = bb_payload.links.html.href;
