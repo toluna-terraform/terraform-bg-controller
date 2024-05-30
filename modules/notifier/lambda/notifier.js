@@ -51,9 +51,9 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
   }
 }
 
-function sendTeamsNotification(APP_NAME,ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK, TRIBE_NAME) {
-  ENV_NAME = (ENV_NAME.toLowerCase() == "prod") ? "Production" : ENV_NAME
-  return new Promise((resolve, reject) => {
+async function sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT,TEAMS_HOOK, TRIBE_NAME) {
+    ENV_NAME = (ENV_NAME.toLowerCase() == "prod") ? "Production" : ENV_NAME;
+    
     const data = JSON.stringify({
       "@type": "MessageCard",
       "@context": "http://schema.org/extensions",
@@ -77,7 +77,7 @@ function sendTeamsNotification(APP_NAME,ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MER
         },
         {
           "name": "Author",
-          "Value": `${AUTHOR}`
+          "value": `${AUTHOR}`
         },
         {
           "name": "Merged By",
@@ -86,34 +86,49 @@ function sendTeamsNotification(APP_NAME,ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MER
         "markdown": true
       }]
     });
+
     const options = {
       hostname: 'tolunaonline.webhook.office.com',
-      path: TEAMS_WEBHOOK,
+      path: TEAMS_HOOK.trim(),
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
     };
-    console.log(`Sending Teams Notification: ${data}`);
+
+    console.log(`Sending Teams Notification for ${APP_NAME} to ${ENV_NAME}: ${data}`);
+
     const req = https.request(options, res => {
-      console.log(`statusCode: ${res.statusCode}`);
-      res.on('data', d => {
-        process.stdout.write(d);
-      });
-      res.on('end', d => {
-        resolve(d);
-      });
+    let responseData = '';
+    console.log(`Response status for ${APP_NAME}: ${res.statusCode}`);
+
+    res.on('data', d => {
+      responseData += d;
     });
 
-    req.on('error', error => {
-      console.error(error);
-      reject(`${error}`)
+    res.on('end', () => {
+      console.log(`Response data for ${APP_NAME}: ${responseData}`);
+      if (res.statusCode >= 200 && res.statusCode < 300) {
+        // Handle successful response here (optional)
+      } else {
+        console.error(`Request failed with status code ${res.statusCode}: ${responseData}`);
+      }
     });
-
-    req.write(data);
-    req.end();
   });
 
+  req.on('error', (error) => {
+    console.error('Error sending Teams notification:', error);
+  });
+
+  req.write(data);
+  req.end();
+
+  // Added await to wait for the request to complete before continuing the loop
+  return new Promise((resolve, reject) => {
+    req.on('close', () => {
+      resolve();
+    });
+  });
 }
 
 exports.handler = async (event) => {
@@ -133,8 +148,9 @@ exports.handler = async (event) => {
   const PR_URL = bb_payload.links.html.href;
   const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
   const TEAMS_WEBHOOKS = TEAMS_WEBHOOK_LIST.split(',');
-  TEAMS_WEBHOOKS.forEach(function(TEAMS_WEBHOOK) {
-    sendTeamsNotification(APP_NAME, ENV_NAME,AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_WEBHOOK.trim(), TRIBE_NAME);
-  });
-  
+  const NOTIFICATIONS = TEAMS_WEBHOOKS.map(async(val) => {
+    const notification = await sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT,val, TRIBE_NAME)
+  })
+  await Promise.all(NOTIFICATIONS);
 };
+
