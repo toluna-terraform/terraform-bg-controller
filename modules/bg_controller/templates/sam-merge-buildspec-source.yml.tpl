@@ -58,7 +58,6 @@ phases:
           terraform workspace select shared-${env_type}
           terraform init
           terraform apply -target=module.dns -auto-approve || exit 1
-          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload "{ \"CODEBUILD_WEBHOOK_TRIGGER\": \"$CODEBUILD_WEBHOOK_TRIGGER\", \"ENV_NAME\": \"${env_name}\" }" response.json
           cd $CODEBUILD_SRC_DIR/terraform/app
           terraform init
           if [[ "$CURRENT_COLOR" == "white" ]]; then
@@ -79,7 +78,5 @@ phases:
             terraform workspace delete ${env_name} || echo "no base workspace to delete"
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
-        else
-          aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload "{ \"CODEBUILD_WEBHOOK_TRIGGER\": \"$CODEBUILD_WEBHOOK_TRIGGER\", \"ENV_NAME\": \"${env_name}\" }" response.json
         fi
         
