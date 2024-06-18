@@ -61,3 +61,77 @@ resource "aws_iam_role_policy_attachment" "role-pipeline-execution" {
   role       = aws_iam_role.notifier.name
   policy_arn = "arn:aws:iam::aws:policy/AdministratorAccess"
 }
+
+
+resource "aws_sns_topic" "builds" {
+  name = "${var.app_name}-${var.env_type}-notifier-sns"
+}
+
+resource "aws_sns_topic_subscription" "sns-topic" {
+  topic_arn = aws_sns_topic.builds.arn
+  protocol  = "lambda"
+  endpoint  = aws_lambda_function.notifier.arn
+}
+
+resource "aws_lambda_permission" "sns_permission_to_invoke_lambda" {
+  statement_id_prefix  = "AllowExecutionFromSNS_${var.app_name}_${var.env_type}_notifier"
+  action        = "lambda:InvokeFunction"
+  function_name = "${var.app_name}-${var.env_type}-notifier"
+  principal     = "sns.amazonaws.com"
+  source_arn = "arn:aws:sns:us-east-1:${data.aws_caller_identity.aws_profile.account_id}:${var.app_name}-${var.env_type}-notifier-sns"
+}
+
+data "aws_iam_policy_document" "builds" {
+  statement {
+    sid       = "TrustCloudWatchEvents"
+    effect    = "Allow"
+    resources = [aws_sns_topic.builds.arn]
+    actions   = ["sns:Publish"]
+    principals {
+      type        = "Service"
+      identifiers = ["events.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_sns_topic_policy" "builds_events" {
+  arn    = aws_sns_topic.builds.arn
+  policy = data.aws_iam_policy_document.builds.json
+}
+
+resource "aws_cloudwatch_event_rule" "builds" {
+  name          = "codebuild-source-merge-${var.app_name}-${var.env_type}"
+  event_pattern = <<PATTERN
+{
+    "source": ["aws.codebuild"],
+    "detail-type": ["CodeBuild Build State Change"],
+    "detail": {
+        "build-status": [
+            "SUCCEEDED", 
+            "FAILED",
+            "STOPPED"
+        ],
+        "project-name": ${jsonencode(var.project_names)}
+    }
+}
+PATTERN
+
+}
+
+resource "aws_cloudwatch_event_target" "builds" {
+  target_id = "codebuild-source-merge-${var.app_name}-${var.env_type}"
+  rule      = aws_cloudwatch_event_rule.builds.name
+  arn       = aws_sns_topic.builds.arn
+  input_transformer {
+    input_paths = {
+      project_name = "$.detail.project-name",
+      status       = "$.detail.build-status",
+    }
+    input_template = <<EOF
+{
+  "project_name": "<project_name>",
+  "build_status": "<status>"
+}
+EOF
+  }
+}

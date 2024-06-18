@@ -1,3 +1,7 @@
+locals {
+  project_names = [for key,value in var.apps: "codebuild-source-merge-${var.app_name}-${key}" if value.pipeline_type != "dev"]
+}
+
 resource "aws_s3_bucket" "codepipeline_bucket" {
   bucket        = "s3-codepipeline-${var.app_name}-${var.env_type}"
   force_destroy = true
@@ -114,6 +118,7 @@ module "notifier" {
   app_name          = var.app_name
   env_type          = var.env_type
   source_repository = var.source_repository
+  project_names = local.project_names
 }
 
 module "pipeline_trigger" {

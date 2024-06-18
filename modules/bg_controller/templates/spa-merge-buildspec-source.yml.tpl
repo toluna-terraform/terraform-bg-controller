@@ -27,5 +27,4 @@ phases:
         echo "}"  >> approvalstage-approved.json
         echo "}"  >> approvalstage-approved.json
         aws codepipeline put-approval-result --cli-input-json file://approvalstage-approved.json
-        aws lambda invoke --function-name ${app_name}-${env_type}-notifier --payload "{ \"CODEBUILD_WEBHOOK_TRIGGER\": \"$CODEBUILD_WEBHOOK_TRIGGER\", \"ENV_NAME\": \"${env_name}\" }" response.json
         
