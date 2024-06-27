@@ -85,5 +85,6 @@ phases:
             terraform workspace delete ${env_name} || echo "no base workspace to delete"
             terraform workspace delete ${env_name}-$CURRENT_COLOR
           fi
+        fi
       - export DEPLOYMENT_TYPE=`aws ssm get-parameter --name "/infra/${app_name}-${env_name}/deployment_type" | jq -r .Parameter.Value `
 
