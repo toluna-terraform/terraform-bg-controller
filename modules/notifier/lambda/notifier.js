@@ -1,3 +1,4 @@
+
 const https = require('https');
 const AWS = require('aws-sdk');
 const ssm = new AWS.SSM({ apiVersion: '2014-11-06', region: 'us-east-1' });
@@ -51,16 +52,26 @@ async function getSSMParam(key, withDecryption, defaultValue = null) {
   }
 }
 
-async function sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_HOOK, TRIBE_NAME) {
+async function sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, TEAMS_HOOK, TRIBE_NAME, BUILD_STATUS) {
   ENV_NAME = (ENV_NAME.toLowerCase() == "prod") ? "Production" : ENV_NAME;
-
+  let MESSAGE_COLOR = "16d700"
+  switch (BUILD_STATUS) {
+    case 'STOPPED':
+      MESSAGE_COLOR = "fcba03"
+      break;
+    case 'FAILED':
+      MESSAGE_COLOR = "fc0303"
+      break;
+    default:
+      MESSAGE_COLOR = "16d700"
+  }
   const data = JSON.stringify({
     "@type": "MessageCard",
     "@context": "http://schema.org/extensions",
-    "themeColor": "16d700",
-    "summary": `${APP_NAME} Deploy to ${ENV_NAME} Done`,
+    "themeColor": `${MESSAGE_COLOR}`,
+    "summary": `${APP_NAME} Deploy to ${ENV_NAME}`,
     "sections": [{
-      "activityTitle": `${APP_NAME} Deploy to ${ENV_NAME}`,
+      "activityTitle": `${APP_NAME} Deploy to ${ENV_NAME}  ${BUILD_STATUS}`,
       "activitySubtitle": `${APP_NAME} of Tribe ${TRIBE_NAME}`,
       "activityImage": "",
       "facts": [{
@@ -132,24 +143,29 @@ async function sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_U
 }
 
 exports.handler = async (event) => {
-  console.log(event)
-  const ENV_NAME = event.ENV_NAME;
+  console.log(JSON.stringify(event));
+  const snsMessage = event.Records[0].Sns.Message;
+  const jsonMessage = JSON.parse(snsMessage);
+  const BUILD_STATUS = jsonMessage.build_status;
+  const projectName = jsonMessage.project_name.split("-")
+  const ENV_NAME = projectName[projectName.length - 1]
   const HOOK_ID = (ENV_NAME.toLowerCase() == "prod") ? '/infra/teams_notification_webhook' : '/infra/non_prod/teams_notification_webhook'
+  const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
+  const pr_id = await getSSMParam(`/infra/${APP_NAME.toLowerCase()}-${ENV_NAME}/pr_id`, false);
   const username = await getSSMParam('/app/bb_user', true);
   const password = await getSSMParam('/app/bb_app_pass', true);
   const TEAMS_WEBHOOK_LIST = await getSSMParam(HOOK_ID, true);
   const TRIBE_NAME = await getSSMParam('/infra/tribe', true, "(Tribe is undefind, please add tribe name to ssm parameter '/infra/tribe')");
-  const pr_id = event.CODEBUILD_WEBHOOK_TRIGGER.replaceAll("pr/", "");
   const bb_pr = await getBitBucketPRStatus(username, password, pr_id);
   const bb_payload = JSON.parse(bb_pr)
   const AUTHOR = bb_payload.author.display_name;
   const MERGED_BY = bb_payload.closed_by.display_name;
   const MERGE_COMMIT = bb_payload.merge_commit.hash;
   const PR_URL = bb_payload.links.html.href;
-  const APP_NAME = process.env.APP_NAME.charAt(0).toUpperCase() + process.env.APP_NAME.slice(1);
   const TEAMS_WEBHOOKS = TEAMS_WEBHOOK_LIST.split(',');
+  console.log(`${APP_NAME}, ${ENV_NAME}, ${AUTHOR}, ${MERGED_BY}, ${PR_URL}, ${MERGE_COMMIT}, ${TRIBE_NAME}, ${BUILD_STATUS}`)
   const NOTIFICATIONS = TEAMS_WEBHOOKS.map(async (val) => {
-    const notification = await sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, val, TRIBE_NAME)
+    const notification = await sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, val, TRIBE_NAME, BUILD_STATUS)
   })
   await Promise.all(NOTIFICATIONS);
 };
