@@ -152,4 +152,4 @@ exports.handler = async (event) => {
     const notification = await sendTeamsNotification(APP_NAME, ENV_NAME, AUTHOR, MERGED_BY, PR_URL, MERGE_COMMIT, val, TRIBE_NAME)
   })
   await Promise.all(NOTIFICATIONS);
-}
+};
