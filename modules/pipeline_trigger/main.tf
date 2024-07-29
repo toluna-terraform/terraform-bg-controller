@@ -1,9 +1,17 @@
+resource "aws_lambda_layer_version" "lambda_layer_trigger" {
+  filename            = "${path.module}/layer/layer.zip"
+  layer_name          = "aws_sdk_trigger"
+  compatible_runtimes = ["nodejs20.x"]
+  source_code_hash    = filebase64sha256("${path.module}/layer/layer.zip")
+}
+
 resource "aws_lambda_function" "pipeline_trigger" {
   filename         = "${path.module}/lambda/lambda.zip"
   function_name    = "${var.app_name}-${var.env_type}-pipeline-trigger"
   role             = aws_iam_role.pipeline_trigger.arn
   handler          = "pipeline_trigger.handler"
-  runtime          = "nodejs16.x"
+  runtime          = "nodejs20.x"
+  layers           = [aws_lambda_layer_version.lambda_layer_trigger.arn]
   timeout          = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {

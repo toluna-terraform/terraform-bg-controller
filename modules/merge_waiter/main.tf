@@ -1,3 +1,10 @@
+resource "aws_lambda_layer_version" "lambda_layer_waiter" {
+  filename            = "${path.module}/layer/layer.zip"
+  layer_name          = "aws_sdk_waiter"
+  compatible_runtimes = ["nodejs20.x"]
+  source_code_hash    = filebase64sha256("${path.module}/layer/layer.zip")
+}
+
 # prepare lambda zip file
 data "archive_file" "merge_waiter_zip" {
   type        = "zip"
@@ -10,7 +17,8 @@ resource "aws_lambda_function" "merge_waiter" {
   function_name = "${var.app_name}-${var.env_type}-merge-waiter"
   role          = aws_iam_role.merge_waiter.arn
   handler       = "merge_waiter.handler"
-  runtime       = "nodejs16.x"
+  runtime       = "nodejs20.x"
+  layers           = [aws_lambda_layer_version.lambda_layer_waiter.arn]
   timeout       = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {

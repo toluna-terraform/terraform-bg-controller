@@ -1,16 +1,15 @@
+resource "aws_lambda_layer_version" "lambda_layer_notifer" {
+  filename            = "${path.module}/layer/layer.zip"
+  layer_name          = "aws_sdk"
+  compatible_runtimes = ["nodejs20.x"]
+  source_code_hash    = filebase64sha256("${path.module}/layer/layer.zip")
+}
+
 # prepare lambda zip file
 data "archive_file" "notifier_zip" {
   type        = "zip"
   source_file = "${path.module}/lambda/notifier.js"
   output_path = "${path.module}/lambda/lambda.zip"
-}
-
-
-resource "aws_lambda_layer_version" "aws_sdk" {
-  filename   = "${path.module}/layer/layer.zip"
-  layer_name = "${var.app_name}-${var.env_type}-aws_sdk"
-
-  compatible_runtimes = ["nodejs20.x"]
 }
 
 resource "aws_lambda_function" "notifier" {
@@ -19,7 +18,7 @@ resource "aws_lambda_function" "notifier" {
   role             = aws_iam_role.notifier.arn
   handler          = "notifier.handler"
   runtime          = "nodejs20.x"
-  layers           = [aws_lambda_layer_version.aws_sdk.arn]
+  layers           = [aws_lambda_layer_version.lambda_layer_notifer.arn]
   timeout          = 180
   source_code_hash = filebase64sha256("${path.module}/lambda/lambda.zip")
   environment {
